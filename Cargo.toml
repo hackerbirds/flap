@@ -1,0 +1,8 @@
+[workspace]
+members = ["flap-lib", "flap-cli", "flap-app/src-tauri"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["hackerbirds"]
+description = "Flap your files away from one device to another."

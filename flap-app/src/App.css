@@ -1,0 +1,91 @@
+* {
+  margin: 0;
+  padding: 0;
+
+}
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+div.center {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 40px;
+  padding: 2rem;
+
+  
+}
+
+main.container {
+  background-color: white;
+  width: 100vw;
+  height: 100vh;
+}
+
+h1 {
+  height: 50px;
+}
+
+section#action {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 1rem;
+  overflow: hidden;
+  max-width: 100%;
+  height: 100%;
+}
+
+section#action > section {
+  flex-grow: 1;
+  min-width: 0;
+  min-height: 100%;
+  width: 100%;
+
+  border: 2px dotted black;
+  padding: 1rem;
+}
+
+section#send {
+  background-color: green;
+}
+section#receive {
+  background-color: pink;
+}
+
+input#ticket-input {
+  background-color: palegoldenrod;
+  border: 0;
+  height: 70px;
+  font-size: xx-large;
+  box-sizing: border-box;
+  border-radius: 10px;
+  padding: 1rem;
+  width: 100%;
+}
+
+span#ticket {
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  overflow-wrap: break-word;
+  font-weight: 500;
+  color: white;
+}
