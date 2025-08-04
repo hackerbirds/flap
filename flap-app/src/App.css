@@ -1,16 +1,21 @@
 * {
   margin: 0;
   padding: 0;
-
+  box-sizing: border-box;
 }
+
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
 
-  color: #0f0f0f;
+  color: white;
   background-color: #f6f6f6;
+
+  --send-color: #5ea560;
+  --receive-bg-color: #eaa3e6;
+  --receive-input-bg: #986496;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -23,6 +28,12 @@
   overflow: hidden;
 }
 
+main.container {
+  background-color: white;
+  width: 100vw;
+  height: 100vh;
+}
+
 div.center {
   display: flex;
   flex-direction: column;
@@ -30,23 +41,19 @@ div.center {
   gap: 40px;
   padding: 2rem;
 
-  
-}
-
-main.container {
-  background-color: white;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
 }
 
 h1 {
-  height: 50px;
+  text-shadow: grey 1px 1px 2px;
 }
 
 section#action {
+  position: relative;
   display: flex;
   align-items: stretch;
-  justify-content: space-around;
+  justify-content: center;
   gap: 1rem;
   overflow: hidden;
   max-width: 100%;
@@ -56,27 +63,36 @@ section#action {
 section#action > section {
   flex-grow: 1;
   min-width: 0;
-  min-height: 100%;
   width: 100%;
 
-  border: 2px dotted black;
+  max-width: 400px;
+  max-height: 300px;
+
+  border: 1px solid #a4a4a4;
+  box-shadow: 1px 1px 3px #cfcfcf;
   padding: 1rem;
+  padding-bottom: 2rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 section#send {
-  background-color: green;
+  background-color: var(--send-color);
 }
 section#receive {
-  background-color: pink;
+  background-color: var(--receive-bg-color);
 }
 
 input#ticket-input {
-  background-color: palegoldenrod;
+  color: white;
+  background-color: var(--receive-input-bg);
   border: 0;
-  height: 70px;
-  font-size: xx-large;
+  height: 40px;
+  border-radius: 2px;
+  font-size: x-large;
   box-sizing: border-box;
-  border-radius: 10px;
   padding: 1rem;
   width: 100%;
 }
@@ -84,8 +100,112 @@ input#ticket-input {
 span#ticket {
   width: 100%;
   height: 100%;
-  padding: 1rem;
   overflow-wrap: break-word;
   font-weight: 500;
+  font-family: monospace;
   color: white;
+}
+
+.crow {
+  height: 50px;
+  width: 100%;
+
+  position: relative;
+  top: 5px;
+}
+
+.flying-crow {
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.flying-crow > img {
+  display: absolute;
+  aspect-ratio: 1;
+  max-height: 120px;
+  height: 300%;
+  position: relative;
+}
+
+.standing-crow {
+  position: relative;
+  top: -23px;
+  left: 0;
+  width: 150px;
+  z-index: 2;
+}
+
+.flying-crow-1 {
+  animation: flap-crow-1 1.5s infinite;
+}
+
+.flying-crow-2 {
+  top: -20px;
+  animation: flap-crow-2 1.5s infinite;
+}
+
+.flying-crow-3 {
+  animation: flap-crow-3 1.5s infinite;
+}
+
+@keyframes flap-crow-1 {
+  0% {
+    left: 0;
+    visibility: visible;
+  }
+  33.299% {
+    visibility: visible;
+  }
+  33.3% {
+    visibility: hidden;
+  }
+  100% {
+    visibility: hidden;
+    left: 10px;
+  }
+}
+
+@keyframes flap-crow-2 {
+  0% {
+    visibility: hidden;
+    left: -10px;
+  }
+  33.299% {
+    visibility: hidden;
+  }
+  33.3% {
+    visibility: visible;
+  }
+  66.599% {
+    visibility: visible;
+  }
+  66.6% {
+    visibility: hidden;
+  }
+  100% {
+    visibility: hidden;
+    left: 10px;
+  }
+}
+
+@keyframes flap-crow-3 {
+  0% {
+    left: -10px;
+    visibility: hidden;
+  }
+  66.599% {
+    visibility: hidden;
+  }
+  66.6% {
+    visibility: visible;
+  }
+  100% {
+    visibility: visible;
+    left: 0;
+  }
 }
