@@ -6,7 +6,7 @@ use sha2::Sha256;
 use crate::crypto::master_key::MasterKey;
 
 /// A nonce for use in the AEAD stream cipher.
-/// 
+///
 /// This should only be used once, but I will design
 /// the app in a way that the Ticket is a one-time code.
 pub struct AeadStreamNonce([u8; 19]);

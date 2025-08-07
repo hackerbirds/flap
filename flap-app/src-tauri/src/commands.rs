@@ -1,26 +1,24 @@
-use flap_lib::{receiver::P2pReceiver, sender::P2pSender};
-use std::{fs::File, io::Write};
+use crate::AppState;
 
 #[tauri::command]
-pub async fn send_file(file_path: String) -> String {
-    let sender = P2pSender::new().await.unwrap();
+pub async fn send_file(state: tauri::State<'_, AppState>, file_path: String) -> Result<String, ()> {
+    println!("Prepare file");
+    let sender = &state.p2p_sender;
+    sender.send(file_path).await.unwrap();
+    let ticket = sender.ticket.convert();
 
-    let file = File::open(file_path).unwrap();
-    let ticket = sender.send(file).await.unwrap();
-
-    ticket.convert()
+    Ok(ticket)
 }
 
 #[tauri::command]
-pub async fn receive_file(ticket_string: String) -> Result<(), ()> {
-    let receiver = P2pReceiver::new().await.unwrap();
+pub async fn receive_file(
+    state: tauri::State<'_, AppState>,
+    ticket_string: String,
+) -> Result<(), ()> {
+    let receiver = &state.p2p_receiver;
+
     let ticket = ticket_string.parse().unwrap();
-    let mut retrieved_bytes = receiver.retrieve(ticket).await.unwrap();
-    let mut save_path = std::env::home_dir().unwrap();
-    save_path.push("flapped-file.txt");
-    
-    let mut save_file = File::create(save_path).unwrap();
-    save_file.write_all(&mut retrieved_bytes).unwrap();
+    receiver.retrieve(ticket).await.unwrap();
 
     Ok(())
 }

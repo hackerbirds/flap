@@ -1,5 +1,3 @@
-use std::{fs::File, path::PathBuf};
-
 use clap::{Parser, Subcommand};
 use flap_lib::{receiver::P2pReceiver, sender::P2pSender};
 
@@ -32,8 +30,9 @@ async fn main() {
         Commands::Send { file_path } => {
             let sender = P2pSender::new().await.unwrap();
 
-            let file = File::open(file_path).unwrap();
-            let ticket = sender.send(file).await.unwrap();
+            println!("start sending file...");
+            sender.send(file_path).await.unwrap();
+            let ticket = sender.ticket;
 
             println!("File is ready. The ticket is: {}", ticket.convert());
 
@@ -43,6 +42,7 @@ async fn main() {
             let receiver = P2pReceiver::new().await.unwrap();
             let ticket = ticket_string.parse().unwrap();
             let _retrieved_bytes = receiver.retrieve(ticket).await.unwrap();
+            println!("Rcv complete");
         }
     }
 }

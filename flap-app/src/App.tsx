@@ -12,10 +12,15 @@ function App() {
   listen('tauri://drag-drop', event => {
     let file_path: string = (event as any).payload.paths[0]
     setFilePath(file_path.split('/')[-1])
-    invoke('send_file', { filePath: file_path }).then((t) => {
-      setCrowFlying(true)
-      setSendTicket(t as string)
-    })
+    console.log(event)
+    // todo: can only do one file at a time
+    if (!isCrowFlying) {
+      invoke('send_file', { filePath: file_path }).then((t) => {
+        console.log("wwaaa")
+        setCrowFlying(true)
+        setSendTicket(t as string)
+      })
+    }
   })
 
   return (
