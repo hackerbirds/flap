@@ -1,5 +1,9 @@
 use clap::{Parser, Subcommand};
-use flap_lib::{receiver::P2pReceiver, sender::P2pSender};
+use flap_lib::{
+    event::{EventHandler, get_event_handler},
+    receiver::P2pReceiver,
+    sender::P2pSender,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

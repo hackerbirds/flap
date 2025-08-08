@@ -1,27 +1,85 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from '@tauri-apps/api/event'
+
+type TransferId = Uint8Array;
+
+type Transfer = {
+  metadata: FileMetadata;
+  progress: number;
+};
+
+type ReceivingFileEvent = {
+  fileTransferId: TransferId;
+  metadata: FileMetadata;
+};
+
+type FileMetadata = {
+  fileName: string;
+  fileSize: number;
+};
+
+type TransferUpdateEvent = {
+  fileTransferId: TransferId;
+  progress: number;
+};
+
+type TransferCompleteEvent = {
+  fileTransferId: TransferId;
+};
 
 function App() {
   const [sendTicket, setSendTicket] = useState("");
   const [receiveTicket, setReceiveTicket] = useState("");
   const [filePath, setFilePath] = useState("");
   const [isCrowFlying, setCrowFlying] = useState(false);
+  const [transfers, setTransfers] = useState<Map<string, Transfer>>(new Map());
 
-  listen('tauri://drag-drop', event => {
-    let file_path: string = (event as any).payload.paths[0]
-    setFilePath(file_path.split('/')[-1])
-    console.log(event)
-    // todo: can only do one file at a time
-    if (!isCrowFlying) {
-      invoke('send_file', { filePath: file_path }).then((t) => {
-        console.log("wwaaa")
+  useEffect(() => {
+    invoke('get_send_ticket').then((ticket_string) => setSendTicket(ticket_string as string))
+
+    listen<ReceivingFileEvent>('receiving-file', (event) => {
+      console.log("here " + event.payload.fileTransferId)
+      setCrowFlying(true)
+      setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
+        metadata: event.payload.metadata,
+        progress: 0
+      }))
+    });
+
+    listen('tauri://drag-drop', event => {
+      let file_path: string = (event as any).payload.paths[0]
+      setFilePath(file_path.split('/')[-1])
+      invoke('send_file', { filePath: file_path }).then(() => {
         setCrowFlying(true)
-        setSendTicket(t as string)
       })
-    }
-  })
+    })
+  });
+
+  useEffect(() => {
+    listen<TransferUpdateEvent>('transfer-update', (event) => {
+      let transfer = transfers.get(event.payload.fileTransferId.toString())
+      if (transfer) {
+        setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
+          metadata: transfer.metadata,
+          progress: event.payload.progress
+        }))
+      }
+    })
+
+    listen<TransferCompleteEvent>('transfer-complete', (event) => {
+      let transfer = transfers.get(event.payload.fileTransferId.toString())
+      if (transfer) {
+        const newTransfers = new Map(transfers)
+        newTransfers.delete(event.payload.fileTransferId.toString())
+        if (newTransfers.size === 0) {
+          setCrowFlying(false)
+        }
+        setTransfers(newTransfers)
+      }
+    })
+  }, [transfers]);
 
   return (
     <main className="container">
@@ -48,16 +106,26 @@ function App() {
               onSubmit={(e) => {
                 e.preventDefault();
                 invoke('receive_file', { ticketString: receiveTicket }).then(() => {
-                  console.log("yay")
+                  console.log("File received")
                 })
               }}
             >
               <input
                 id="ticket-input"
                 onChange={(e) => { setReceiveTicket(e.target.value) }}
-                placeholder="flap/blobadahfshojmu2..."
+                placeholder="flap/<id>/<key>"
               />
             </form>
+            <>
+              {
+                [...transfers].map(([transfer_id, transfer]) => {
+                  return <div className="transfer" key={transfer_id}>
+                    <b>{transfer.metadata.fileName}</b>
+                    <progress max="100" value={transfer.progress}></progress>
+                  </div>
+                })
+              }
+            </>
           </section>
         </section>
       </div>

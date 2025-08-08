@@ -1,24 +1,25 @@
-use crate::AppState;
+use crate::client::Client;
 
 #[tauri::command]
-pub async fn send_file(state: tauri::State<'_, AppState>, file_path: String) -> Result<String, ()> {
+pub async fn send_file(client: tauri::State<'_, Client>, file_path: String) -> Result<(), ()> {
     println!("Prepare file");
-    let sender = &state.p2p_sender;
-    sender.send(file_path).await.unwrap();
-    let ticket = sender.ticket.convert();
+    client.send_file(file_path).await;
 
-    Ok(ticket)
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_send_ticket(client: tauri::State<'_, Client>) -> String {
+    client.ticket_string()
 }
 
 #[tauri::command]
 pub async fn receive_file(
-    state: tauri::State<'_, AppState>,
+    client: tauri::State<'_, Client>,
     ticket_string: String,
 ) -> Result<(), ()> {
-    let receiver = &state.p2p_receiver;
-
-    let ticket = ticket_string.parse().unwrap();
-    receiver.retrieve(ticket).await.unwrap();
+    println!("Begin receive");
+    client.receive_file(ticket_string).await;
 
     Ok(())
 }

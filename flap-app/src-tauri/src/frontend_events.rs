@@ -1,0 +1,28 @@
+use serde::Serialize;
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReceivingFileEvent {
+    pub file_transfer_id: Vec<u8>,
+    pub metadata: FileMetadata,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileMetadata {
+    pub file_name: String,
+    pub file_size: u64,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferUpdateEvent {
+    pub file_transfer_id: Vec<u8>,
+    pub progress: u64,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferCompleteEvent {
+    pub file_transfer_id: Vec<u8>,
+}

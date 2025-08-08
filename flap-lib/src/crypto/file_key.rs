@@ -1,10 +1,9 @@
 use std::ops::Deref;
 
 use hkdf::Hkdf;
-use iroh::endpoint::{StreamId, VarInt};
 use sha2::Sha256;
 
-use crate::crypto::master_key::MasterKey;
+use crate::{crypto::master_key::MasterKey, file_stream::TransferId};
 
 pub struct FileKey([u8; 32]);
 
@@ -14,14 +13,12 @@ pub struct FileKey([u8; 32]);
 pub struct FileEncryptionKey([u8; 32]);
 
 impl FileKey {
-    pub fn get_file_encryption_key(&self, stream_id: StreamId) -> FileEncryptionKey {
+    pub fn get_file_encryption_key(&self, file_transfer_id: TransferId) -> FileEncryptionKey {
         let ikm = self.0.as_slice();
         let hk = Hkdf::<Sha256>::new(None, &ikm);
         let mut file_encryption_key = [0u8; 32];
 
-        let stream_id_u64 = VarInt::from(stream_id).into_inner();
-        dbg!(stream_id_u64);
-        let info = stream_id_u64.to_le_bytes();
+        let info = file_transfer_id.as_ref();
         hk.expand(&info, &mut file_encryption_key)
             .expect("valid length output");
 

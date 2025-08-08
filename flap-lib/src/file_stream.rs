@@ -1,22 +1,45 @@
 use aead::KeyInit;
-use bytes::{BufMut, Bytes, BytesMut};
-use iroh::endpoint::{RecvStream, SendStream, StreamId};
+use bytes::{BufMut, BytesMut};
+use iroh::endpoint::{RecvStream, SendStream, StreamId, VarInt};
+use sha2::{Digest, Sha256};
 use std::ops::Deref;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
 use crate::crypto::master_key::MasterKey;
 use crate::error::Result;
-use crate::file_metadata::FlapFileMetadata;
+use crate::event::{Event, Progress, get_event_handler};
 use crate::ticket::Ticket;
 
 type Aead = chacha20poly1305::XChaCha20Poly1305;
 type AeadEncryptor = aead::stream::EncryptorBE32<Aead>;
 type AeadDecryptor = aead::stream::DecryptorBE32<Aead>;
 
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+/// Unique per file transfer
+pub struct TransferId([u8; 32]);
+
+impl TransferId {
+    pub fn new(ticket: &Ticket, stream_id: StreamId) -> TransferId {
+        let mut hasher = Sha256::new();
+        hasher.update(ticket.node_id.as_bytes());
+        hasher.update(&VarInt::from(stream_id).into_inner().to_le_bytes());
+
+        let hash = hasher.finalize();
+        TransferId(hash.into())
+    }
+}
+
+impl AsRef<[u8]> for TransferId {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 pub struct FileEncryptionStream {
     reader: File,
     aead_stream: AeadEncryptor,
+    transfer_id: TransferId,
 }
 
 const ENCRYPTION_BLOCK_LENGTH: usize = 1024 * 16; // 16kB
@@ -28,12 +51,12 @@ impl FileEncryptionStream {
     pub fn from_file(
         file: File,
         master_key: MasterKey,
-        stream_id: StreamId,
+        transfer_id: TransferId,
     ) -> FileEncryptionStream {
         let file_key = master_key.file_key();
         let nonce = master_key.aead_nonce();
 
-        let file_encryption_key = file_key.get_file_encryption_key(stream_id);
+        let file_encryption_key = file_key.get_file_encryption_key(transfer_id);
         let aead = Aead::new(file_encryption_key.deref().into());
 
         let aead_stream = AeadEncryptor::from_aead(aead, nonce.as_ref().into());
@@ -41,6 +64,7 @@ impl FileEncryptionStream {
         Self {
             reader: file,
             aead_stream,
+            transfer_id,
         }
     }
 
@@ -58,7 +82,6 @@ impl FileEncryptionStream {
                     bytes_encrypted += ENCRYPTION_BLOCK_LENGTH;
                 }
                 Ok(remaining) => {
-                    dbg!(remaining);
                     stream
                         .write_all(self.aead_stream.encrypt_last(&buf[..remaining])?.as_slice())
                         .await
@@ -70,6 +93,8 @@ impl FileEncryptionStream {
             }
         }
 
+        get_event_handler().send_event(Event::TransferComplete(self.transfer_id));
+
         println!("Encrypted {bytes_encrypted} bytes");
 
         Ok(())
@@ -80,22 +105,15 @@ impl FileDecryptionStream {
     // TODO: Take in a `File` and slowly write to it instead of returning bytes
     pub async fn decrypt(
         ticket: Ticket,
-        stream_id: StreamId,
+        file_transfer_id: TransferId,
         mut stream: RecvStream,
-    ) -> Result<(FlapFileMetadata, Bytes)> {
+        file_size: u64,
+    ) -> Result<()> {
+        let event_handler = get_event_handler();
         let master_key = ticket.master_key();
         let file_key = master_key.file_key();
 
-        let file_encryption_key = file_key.get_file_encryption_key(stream_id);
-
-        let file_metadata_info_length = stream
-            .read_u64()
-            .await
-            .map_err(|_| crate::error::Error::FileReadError)?;
-
-        let mut file_metadata_bytes = BytesMut::zeroed(file_metadata_info_length as usize);
-        stream.read_exact(&mut file_metadata_bytes).await.unwrap();
-        let file_metadata = FlapFileMetadata::from_bytes(file_metadata_bytes.into()).await;
+        let file_encryption_key = file_key.get_file_encryption_key(file_transfer_id);
 
         let nonce = master_key.aead_nonce();
         let aead = Aead::new(file_encryption_key.deref().into());
@@ -105,7 +123,6 @@ impl FileDecryptionStream {
         let mut file_plaintext_bytes = BytesMut::new();
         let mut buffer = BytesMut::new();
         let mut decrypted_bytes = 0;
-
         loop {
             // TODO: Support for unordered/parallel AEAD would allow for faster file transfer
             match stream.read_chunk(DECRYPTION_BLOCK_LENGTH, true).await {
@@ -116,6 +133,10 @@ impl FileDecryptionStream {
 
                         file_plaintext_bytes
                             .put(aead_stream.decrypt_next(block.as_ref())?.as_slice());
+                        let progress = Progress::get_progress(file_size, decrypted_bytes as u64);
+
+                        event_handler.send_event(Event::TransferUpdate(file_transfer_id, progress));
+
                         decrypted_bytes += DECRYPTION_BLOCK_LENGTH;
                     }
                 }
@@ -124,15 +145,15 @@ impl FileDecryptionStream {
                     // We can therefore finish decryption
                     file_plaintext_bytes.put(aead_stream.decrypt_last(buffer.as_ref())?.as_slice());
                     decrypted_bytes += buffer.len();
-                    dbg!(decrypted_bytes);
+                    dbg!(file_size, decrypted_bytes);
                     break;
                 }
                 Err(_) => panic!("decryption stream failed"),
             }
-
-            // Returned None
         }
 
-        Ok((file_metadata, file_plaintext_bytes.into()))
+        event_handler.send_event(Event::TransferComplete(file_transfer_id));
+
+        Ok(())
     }
 }

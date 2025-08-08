@@ -4,6 +4,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use tokio::fs::metadata;
 
 /// Basic file metadata structure.
+#[derive(Debug, Clone)]
 pub struct FlapFileMetadata {
     // TODO: We will allow dirs in the duture
     #[expect(dead_code)]

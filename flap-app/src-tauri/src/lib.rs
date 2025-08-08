@@ -1,11 +1,13 @@
-use flap_lib::{receiver::P2pReceiver, sender::P2pSender};
-use tauri::Manager;
+use tauri::{async_runtime, Manager};
 
+use crate::client::Client;
+
+pub mod client;
 pub mod commands;
+pub mod frontend_events;
 
 pub struct AppState {
-    pub p2p_sender: P2pSender,
-    pub p2p_receiver: P2pReceiver,
+    pub client: Client,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -15,27 +17,20 @@ pub fn run() {
         //.plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let handler = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                println!("Setting up P2P");
+            async_runtime::spawn(async move {
+                println!("Setting up client");
 
-                let p2p_sender = P2pSender::new().await.unwrap();
-                let p2p_receiver = P2pReceiver::new().await.unwrap();
-
-                let app_state = AppState {
-                    p2p_sender,
-                    p2p_receiver,
-                };
-
-                assert!(handler.manage(app_state));
-
-                println!("P2P Has been set up");
+                let client = Client::start(handler.clone()).await;
+                handler.manage(client);
+                println!("Client has been set up");
             });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::send_file,
-            commands::receive_file
+            commands::receive_file,
+            commands::get_send_ticket,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
