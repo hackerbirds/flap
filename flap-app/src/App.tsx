@@ -55,7 +55,16 @@ function App() {
         setCrowFlying(true)
       })
     })
-  });
+
+    listen<TransferCompleteEvent>('transfer-complete', (event) => {
+      const newTransfers = new Map(transfers)
+      newTransfers.delete(event.payload.fileTransferId.toString())
+      if (newTransfers.size === 0) {
+        setCrowFlying(false)
+      }
+      setTransfers(newTransfers)
+    })
+  }, []);
 
   useEffect(() => {
     listen<TransferUpdateEvent>('transfer-update', (event) => {
@@ -67,19 +76,7 @@ function App() {
         }))
       }
     })
-
-    listen<TransferCompleteEvent>('transfer-complete', (event) => {
-      let transfer = transfers.get(event.payload.fileTransferId.toString())
-      if (transfer) {
-        const newTransfers = new Map(transfers)
-        newTransfers.delete(event.payload.fileTransferId.toString())
-        if (newTransfers.size === 0) {
-          setCrowFlying(false)
-        }
-        setTransfers(newTransfers)
-      }
-    })
-  }, [transfers]);
+  }, [transfers, setTransfers]);
 
   return (
     <main className="container">

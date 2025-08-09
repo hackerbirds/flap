@@ -22,6 +22,7 @@ pub struct TransferId([u8; 32]);
 impl TransferId {
     pub fn new(ticket: &Ticket, stream_id: StreamId) -> TransferId {
         let mut hasher = Sha256::new();
+        hasher.update(&ticket.master_key().0);
         hasher.update(ticket.node_id.as_bytes());
         hasher.update(&VarInt::from(stream_id).into_inner().to_le_bytes());
 
@@ -42,7 +43,7 @@ pub struct FileEncryptionStream {
     transfer_id: TransferId,
 }
 
-const ENCRYPTION_BLOCK_LENGTH: usize = 1024 * 16; // 16kB
+const ENCRYPTION_BLOCK_LENGTH: usize = 1024 * 16; // 64kB
 const DECRYPTION_BLOCK_LENGTH: usize = ENCRYPTION_BLOCK_LENGTH + 16;
 
 pub struct FileDecryptionStream {}

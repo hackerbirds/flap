@@ -5,11 +5,12 @@ use sha2::Sha256;
 
 use crate::{crypto::master_key::MasterKey, file_stream::TransferId};
 
+/// This key is used for all files within one connection.
 pub struct FileKey([u8; 32]);
 
-/// The encryption key used per file. It is derived from [`FileKey`]
-/// and per [`StreamId`], since there is one QUIC stream per file, and that
-/// QUIC requires [`StreamId`] to be unique and not reused.
+/// The encryption key used *per file*. It is derived from [`FileKey`]
+/// and per [`TransferId`], since there is one QUIC stream per file, and that
+/// QUIC requires [`TransferId`] to be unique and not reused.
 pub struct FileEncryptionKey([u8; 32]);
 
 impl FileKey {

@@ -3,7 +3,8 @@
 
 use std::str::FromStr;
 
-use iroh::NodeId;
+use base64ct::{Base64Url, Encoding};
+use iroh::{NodeId, PublicKey};
 
 use crate::{crypto::master_key::MasterKey, error::Error};
 
@@ -28,7 +29,7 @@ impl Ticket {
     pub fn convert(&self) -> String {
         format!(
             "flap/{}/{}",
-            self.node_id,
+            Base64Url::encode_string(self.node_id.as_bytes()),
             self.master_key.encode_to_string()
         )
     }
@@ -48,7 +49,14 @@ impl FromStr for Ticket {
             return Err(Error::TicketParseError);
         }
 
-        let node_id = node_id_str.parse().map_err(|_| Error::TicketParseError)?;
+        let node_id = PublicKey::from_bytes(
+            &Base64Url::decode_vec(node_id_str)
+                .map_err(|_| Error::TicketParseError)?
+                .try_into()
+                .unwrap(),
+        )
+        .map_err(|_| Error::TicketParseError)?;
+
         let master_key = master_key_str.parse()?;
 
         Ok(Self {

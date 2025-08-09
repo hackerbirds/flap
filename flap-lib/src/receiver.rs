@@ -53,7 +53,6 @@ impl P2pReceiver {
                 res = connection.accept_bi() => {
                     match res {
                         Ok((_stream_tx, mut stream_rx)) => {
-                            println!("receiving new file");
                             // New file
                             let file_transfer_id = TransferId::new(&ticket, stream_rx.id());
 
