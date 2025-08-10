@@ -32,13 +32,13 @@ impl Client {
             let event_handler = get_event_handler();
             while let Some(event) = event_handler.get_receiver().await.recv().await {
                 match event {
-                    Event::TransferUpdate(file_transfer_id, progress) => {
+                    Event::TransferUpdate(file_transfer_id, total_decrypted_bytes) => {
                         tauri_app_handle_c
                             .emit(
                                 "transfer-update",
                                 frontend_events::TransferUpdateEvent {
                                     file_transfer_id: file_transfer_id.as_ref().to_vec(),
-                                    progress: (*progress.as_ref()) as u64,
+                                    bytes_downloaded: total_decrypted_bytes,
                                 },
                             )
                             .unwrap();
@@ -54,7 +54,7 @@ impl Client {
                                     file_transfer_id: file_transfer_id.as_ref().to_vec(),
                                     metadata: frontend_events::FileMetadata {
                                         file_name,
-                                        file_size,
+                                        expected_file_size: file_size,
                                     },
                                 },
                             )

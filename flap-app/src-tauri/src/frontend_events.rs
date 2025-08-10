@@ -11,14 +11,14 @@ pub struct ReceivingFileEvent {
 #[serde(rename_all = "camelCase")]
 pub struct FileMetadata {
     pub file_name: String,
-    pub file_size: u64,
+    pub expected_file_size: u64,
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferUpdateEvent {
     pub file_transfer_id: Vec<u8>,
-    pub progress: u64,
+    pub bytes_downloaded: u64,
 }
 
 #[derive(Clone, Serialize)]

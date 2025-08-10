@@ -1,8 +1,8 @@
 pub mod crypto;
 pub mod error;
 pub mod event;
-pub mod file_metadata;
 pub mod file_stream;
+pub mod fs;
 pub mod p2p;
 pub mod receiver;
 pub mod sender;

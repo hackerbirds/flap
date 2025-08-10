@@ -1,5 +1,3 @@
-use std::env::home_dir;
-
 use bytes::BytesMut;
 use iroh::endpoint::ConnectionError;
 use tokio::{io::AsyncReadExt, task::JoinSet};
@@ -7,8 +5,8 @@ use tokio::{io::AsyncReadExt, task::JoinSet};
 use crate::{
     error::Result,
     event::{Event, get_event_handler},
-    file_metadata::FlapFileMetadata,
-    file_stream::{FileDecryptionStream, TransferId},
+    file_stream::{FileDecryptor, TransferId},
+    fs::{metadata::FlapFileMetadata, save::FileSaver},
     p2p::{ALPN, P2pEndpoint},
     ticket::Ticket,
 };
@@ -37,7 +35,9 @@ impl P2pReceiver {
 
         println!("Connection established");
 
-        // The set of all open QUIC streams, one per file.
+        let file_saver = FileSaver::new().await;
+
+        // The set of all file decryptor streams.
         let mut file_streams: JoinSet<Result<()>> = JoinSet::new();
 
         loop {
@@ -45,7 +45,7 @@ impl P2pReceiver {
                 Some(Ok(res)) = file_streams.join_next() => {
                     match res {
                         Ok(()) => {
-                            println!("File downloaded successfully");
+                            println!("File downloaded and saved successfully.");
                         },
                         Err(err) => panic!("err: {err:?}")
                     }
@@ -64,11 +64,10 @@ impl P2pReceiver {
                             let mut file_metadata_bytes = BytesMut::zeroed(file_metadata_info_length as usize);
                             stream_rx.read_exact(&mut file_metadata_bytes).await.unwrap();
                             let file_metadata = FlapFileMetadata::from_bytes(file_metadata_bytes.into()).await;
-                            let file_size = file_metadata.file_size;
+                            let file = file_saver.prepare_file(&file_metadata.file_name).await.unwrap();
                             event_handler.send_event(Event::ReceivingFile(file_transfer_id, file_metadata));
 
-                            let file_decr_fut = FileDecryptionStream::decrypt(ticket.clone(), file_transfer_id, stream_rx, file_size);
-                            file_streams.spawn(file_decr_fut);
+                            file_streams.spawn(FileDecryptor::launch(ticket.clone(), file_transfer_id, stream_rx, file));
                         },
                         Err(ConnectionError::LocallyClosed) => { println!("Stream closed") }
                         Err(err) => {

@@ -6,6 +6,8 @@ import { listen } from '@tauri-apps/api/event'
 type TransferId = Uint8Array;
 
 type Transfer = {
+  // `true` if sending, `false` is receiving
+  sending: boolean;
   metadata: FileMetadata;
   progress: number;
 };
@@ -17,12 +19,12 @@ type ReceivingFileEvent = {
 
 type FileMetadata = {
   fileName: string;
-  fileSize: number;
+  expectedFileSize: number;
 };
 
 type TransferUpdateEvent = {
   fileTransferId: TransferId;
-  progress: number;
+  bytesDownloaded: number;
 };
 
 type TransferCompleteEvent = {
@@ -43,8 +45,9 @@ function App() {
       console.log("here " + event.payload.fileTransferId)
       setCrowFlying(true)
       setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
+        sending: false,
         metadata: event.payload.metadata,
-        progress: 0
+        progress: 0,
       }))
     });
 
@@ -71,8 +74,9 @@ function App() {
       let transfer = transfers.get(event.payload.fileTransferId.toString())
       if (transfer) {
         setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
+          sending: transfer.sending,
           metadata: transfer.metadata,
-          progress: event.payload.progress
+          progress: (100 * event.payload.bytesDownloaded) / transfer.metadata.expectedFileSize
         }))
       }
     })

@@ -1,41 +1,12 @@
-use std::{
-    fmt::Display,
-    sync::{Arc, OnceLock},
-};
+use std::sync::{Arc, OnceLock};
 
 use tokio::sync::{Mutex, MutexGuard, mpsc};
 
-use crate::{file_metadata::FlapFileMetadata, file_stream::TransferId};
-
-/// A value between 0 and 100.
-#[derive(Debug, Clone, Copy)]
-pub struct Progress(f64);
-
-impl Progress {
-    pub const fn zero() -> Self {
-        Progress(0f64)
-    }
-
-    pub fn get_progress(total_file_size: u64, decrypted_bytes: u64) -> Self {
-        Progress(100f64 * (decrypted_bytes as f64) / (total_file_size as f64))
-    }
-}
-
-impl Display for Progress {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}%", self.0)
-    }
-}
-
-impl AsRef<f64> for Progress {
-    fn as_ref(&self) -> &f64 {
-        &self.0
-    }
-}
+use crate::{file_stream::TransferId, fs::metadata::FlapFileMetadata};
 
 #[derive(Debug)]
 pub enum Event {
-    TransferUpdate(TransferId, Progress),
+    TransferUpdate(TransferId, u64),
     ReceivingFile(TransferId, FlapFileMetadata),
     TransferComplete(TransferId),
 }

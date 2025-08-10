@@ -4,11 +4,11 @@ use iroh::endpoint::{RecvStream, SendStream, StreamId, VarInt};
 use sha2::{Digest, Sha256};
 use std::ops::Deref;
 use tokio::fs::File;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::crypto::master_key::MasterKey;
 use crate::error::Result;
-use crate::event::{Event, Progress, get_event_handler};
+use crate::event::{Event, get_event_handler};
 use crate::ticket::Ticket;
 
 type Aead = chacha20poly1305::XChaCha20Poly1305;
@@ -37,7 +37,7 @@ impl AsRef<[u8]> for TransferId {
     }
 }
 
-pub struct FileEncryptionStream {
+pub struct FileEncryptor {
     reader: File,
     aead_stream: AeadEncryptor,
     transfer_id: TransferId,
@@ -46,14 +46,10 @@ pub struct FileEncryptionStream {
 const ENCRYPTION_BLOCK_LENGTH: usize = 1024 * 16; // 64kB
 const DECRYPTION_BLOCK_LENGTH: usize = ENCRYPTION_BLOCK_LENGTH + 16;
 
-pub struct FileDecryptionStream {}
+pub struct FileDecryptor {}
 
-impl FileEncryptionStream {
-    pub fn from_file(
-        file: File,
-        master_key: MasterKey,
-        transfer_id: TransferId,
-    ) -> FileEncryptionStream {
+impl FileEncryptor {
+    pub fn from_file(file: File, master_key: MasterKey, transfer_id: TransferId) -> FileEncryptor {
         let file_key = master_key.file_key();
         let nonce = master_key.aead_nonce();
 
@@ -102,13 +98,13 @@ impl FileEncryptionStream {
     }
 }
 
-impl FileDecryptionStream {
+impl FileDecryptor {
     // TODO: Take in a `File` and slowly write to it instead of returning bytes
-    pub async fn decrypt(
+    pub async fn launch(
         ticket: Ticket,
         file_transfer_id: TransferId,
-        mut stream: RecvStream,
-        file_size: u64,
+        mut receive_stream: RecvStream,
+        mut output_file: File,
     ) -> Result<()> {
         let event_handler = get_event_handler();
         let master_key = ticket.master_key();
@@ -126,17 +122,24 @@ impl FileDecryptionStream {
         let mut decrypted_bytes = 0;
         loop {
             // TODO: Support for unordered/parallel AEAD would allow for faster file transfer
-            match stream.read_chunk(DECRYPTION_BLOCK_LENGTH, true).await {
+            match receive_stream
+                .read_chunk(DECRYPTION_BLOCK_LENGTH, true)
+                .await
+            {
                 Ok(Some(chunk)) => {
                     buffer.put(chunk.bytes);
                     if buffer.len() >= DECRYPTION_BLOCK_LENGTH {
                         let block = buffer.split_to(DECRYPTION_BLOCK_LENGTH);
 
-                        file_plaintext_bytes
-                            .put(aead_stream.decrypt_next(block.as_ref())?.as_slice());
-                        let progress = Progress::get_progress(file_size, decrypted_bytes as u64);
+                        output_file
+                            .write_all(aead_stream.decrypt_next(block.as_ref())?.as_slice())
+                            .await
+                            .expect("file can be written to");
 
-                        event_handler.send_event(Event::TransferUpdate(file_transfer_id, progress));
+                        event_handler.send_event(Event::TransferUpdate(
+                            file_transfer_id,
+                            decrypted_bytes as u64,
+                        ));
 
                         decrypted_bytes += DECRYPTION_BLOCK_LENGTH;
                     }
@@ -145,8 +148,6 @@ impl FileDecryptionStream {
                     // Stream is complete and we don't have a full block's amount of bytes
                     // We can therefore finish decryption
                     file_plaintext_bytes.put(aead_stream.decrypt_last(buffer.as_ref())?.as_slice());
-                    decrypted_bytes += buffer.len();
-                    dbg!(file_size, decrypted_bytes);
                     break;
                 }
                 Err(_) => panic!("decryption stream failed"),
@@ -154,6 +155,8 @@ impl FileDecryptionStream {
         }
 
         event_handler.send_event(Event::TransferComplete(file_transfer_id));
+
+        output_file.sync_all().await?;
 
         Ok(())
     }

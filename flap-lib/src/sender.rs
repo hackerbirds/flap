@@ -19,8 +19,8 @@ use tokio::{
 use crate::{
     crypto::master_key::MasterKey,
     error::{Error, Result},
-    file_metadata::FlapFileMetadata,
-    file_stream::{FileEncryptionStream, TransferId},
+    file_stream::{FileEncryptor, TransferId},
+    fs::metadata::FlapFileMetadata,
     p2p::{ALPN, P2pEndpoint},
     ticket::Ticket,
 };
@@ -110,11 +110,8 @@ impl iroh::protocol::ProtocolHandler for P2pSenderHandler {
                 let (mut file_stream_tx, _file_stream_rx) = connection.open_bi().await.unwrap();
 
                 let file_transfer_id = TransferId::new(&self.ticket, file_stream_tx.id());
-                let file_stream = FileEncryptionStream::from_file(
-                    file,
-                    *self.ticket.master_key(),
-                    file_transfer_id,
-                );
+                let file_stream =
+                    FileEncryptor::from_file(file, *self.ticket.master_key(), file_transfer_id);
 
                 println!("Sending file metadata...");
                 file_stream_tx
