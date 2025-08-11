@@ -6,6 +6,10 @@ on:
     branches:
       - release
 
+defaults:
+  run:
+    working-directory: ./flap-app
+    
 jobs:
   publish-tauri:
     permissions:
@@ -50,7 +54,6 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: install frontend dependencies
-        working-directory: ./flap-app
         run: npm install
 
       - uses: tauri-apps/tauri-action@v0
