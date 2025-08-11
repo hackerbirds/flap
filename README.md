@@ -1,7 +1,6 @@
-<div style="display: block; height: 100px">
-    <img src="flap-app/public/standing.png" style="float: left;" width="100"/> 
-    <h1>Flap</h1>
-</div>
+<img src="flap-app/public/standing.png" width="200"/> 
+
+# Flap
 
 Our expert team of crows has been trained to provide the best file transfer service.
 Give them your packages and watch them magically flap from one device to another,
