@@ -26,10 +26,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: cd to flap-app
-        run: cd flap-app
-
+      
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
@@ -53,6 +50,7 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: install frontend dependencies
+        working-directory: ./flap-app
         run: npm install
 
       - uses: tauri-apps/tauri-action@v0
