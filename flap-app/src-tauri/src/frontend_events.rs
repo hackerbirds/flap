@@ -2,9 +2,10 @@ use serde::Serialize;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReceivingFileEvent {
+pub struct PreparingFileEvent {
     pub file_transfer_id: Vec<u8>,
     pub metadata: FileMetadata,
+    pub sending: bool,
 }
 
 #[derive(Clone, Serialize)]

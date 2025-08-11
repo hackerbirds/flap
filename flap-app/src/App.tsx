@@ -10,11 +10,13 @@ type Transfer = {
   sending: boolean;
   metadata: FileMetadata;
   progress: number;
+  isCompleted: boolean;
 };
 
-type ReceivingFileEvent = {
+type PreparingFileEvent = {
   fileTransferId: TransferId;
   metadata: FileMetadata;
+  sending: boolean;
 };
 
 type FileMetadata = {
@@ -36,36 +38,39 @@ function App() {
   const [receiveTicket, setReceiveTicket] = useState("");
   const [filePath, setFilePath] = useState("");
   const [isCrowFlying, setCrowFlying] = useState(false);
+  const [transfersInProgress, setTransfersInProgress] = useState(0);
   const [transfers, setTransfers] = useState<Map<string, Transfer>>(new Map());
 
   useEffect(() => {
     invoke('get_send_ticket').then((ticket_string) => setSendTicket(ticket_string as string))
 
-    listen<ReceivingFileEvent>('receiving-file', (event) => {
-      console.log("here " + event.payload.fileTransferId)
+    listen<PreparingFileEvent>('preparing-file', (event) => {
+      setTransfersInProgress(transfersInProgress + 1)
       setCrowFlying(true)
       setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
-        sending: false,
+        sending: event.payload.sending,
         metadata: event.payload.metadata,
         progress: 0,
+        isCompleted: false,
       }))
     });
 
     listen('tauri://drag-drop', event => {
       let file_path: string = (event as any).payload.paths[0]
       setFilePath(file_path.split('/')[-1])
-      invoke('send_file', { filePath: file_path }).then(() => {
-        setCrowFlying(true)
-      })
+      invoke('send_file', { filePath: file_path });
     })
 
     listen<TransferCompleteEvent>('transfer-complete', (event) => {
+      console.log("yeah")
       const newTransfers = new Map(transfers)
       newTransfers.delete(event.payload.fileTransferId.toString())
-      if (newTransfers.size === 0) {
+      setTransfers(newTransfers)
+      // this was the last transfer
+      if (transfersInProgress === 1) {
         setCrowFlying(false)
       }
-      setTransfers(newTransfers)
+      setTransfersInProgress(transfersInProgress - 1)
     })
   }, []);
 
@@ -76,7 +81,8 @@ function App() {
         setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
           sending: transfer.sending,
           metadata: transfer.metadata,
-          progress: (100 * event.payload.bytesDownloaded) / transfer.metadata.expectedFileSize
+          progress: (100 * event.payload.bytesDownloaded) / transfer.metadata.expectedFileSize,
+          isCompleted: false,
         }))
       }
     })
@@ -99,6 +105,16 @@ function App() {
             <h1>Send a package</h1>
             <i>{filePath}</i>
             <span id="ticket">{sendTicket}</span>
+            <div className="transfers sending">
+              {
+                [...transfers].filter(([_transfer_id, transfer]) => transfer.sending).map(([transfer_id, transfer]) => {
+                  return <div className="transfer" key={transfer_id}>
+                    <b>{transfer.metadata.fileName}</b>
+                    <progress max="100" value={transfer.progress === 0 ? undefined : transfer.progress}></progress>
+                  </div>
+                })
+              }
+            </div>
           </section>
           <section id="receive">
             <h1>Receive a package</h1>
@@ -117,16 +133,16 @@ function App() {
                 placeholder="flap/<id>/<key>"
               />
             </form>
-            <>
+            <div className="transfers receiving">
               {
-                [...transfers].map(([transfer_id, transfer]) => {
+                [...transfers].filter(([_transfer_id, transfer]) => !transfer.sending).map(([transfer_id, transfer]) => {
                   return <div className="transfer" key={transfer_id}>
                     <b>{transfer.metadata.fileName}</b>
                     <progress max="100" value={transfer.progress}></progress>
                   </div>
                 })
               }
-            </>
+            </div>
           </section>
         </section>
       </div>

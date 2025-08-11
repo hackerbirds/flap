@@ -2,12 +2,12 @@ use std::sync::{Arc, OnceLock};
 
 use tokio::sync::{Mutex, MutexGuard, mpsc};
 
-use crate::{file_stream::TransferId, fs::metadata::FlapFileMetadata};
+use crate::{crypto::transfer_id::TransferId, fs::metadata::FlapFileMetadata};
 
 #[derive(Debug)]
 pub enum Event {
     TransferUpdate(TransferId, u64),
-    ReceivingFile(TransferId, FlapFileMetadata),
+    PreparingFile(TransferId, FlapFileMetadata, bool /* sending? */),
     TransferComplete(TransferId),
 }
 

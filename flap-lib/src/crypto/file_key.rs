@@ -3,7 +3,7 @@ use std::ops::Deref;
 use hkdf::Hkdf;
 use sha2::Sha256;
 
-use crate::{crypto::master_key::MasterKey, file_stream::TransferId};
+use crate::crypto::{master_key::MasterKey, transfer_id::TransferId};
 
 /// This key is used for all files within one connection.
 pub struct FileKey([u8; 32]);

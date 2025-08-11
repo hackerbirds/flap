@@ -3,22 +3,22 @@ use std::path::PathBuf;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use tokio::fs::metadata;
 
+pub const MAX_METADATA_LENGTH_ALLOWED: u64 = 1 << 13; // 8kB max
+
 /// Basic file metadata structure.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FlapFileMetadata {
     // TODO: We will allow dirs in the duture
-    #[expect(dead_code)]
     is_file: bool,
     // If this is a directory, list files inside directory
     // We only support files for now
-    #[expect(dead_code)]
     dir_file_entries: Option<Vec<FlapFileMetadata>>,
     pub file_size: u64,
     pub file_name: String,
 }
 
 impl FlapFileMetadata {
-    pub async fn load(file_path: &PathBuf) -> Self {
+    pub async fn from_path(file_path: &PathBuf) -> Self {
         let metadata = metadata(file_path).await.unwrap();
 
         Self {

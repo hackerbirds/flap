@@ -31,6 +31,7 @@ impl Client {
         let _event_task = async_runtime::spawn(async move {
             let event_handler = get_event_handler();
             while let Some(event) = event_handler.get_receiver().await.recv().await {
+                println!("Event: {event:?}");
                 match event {
                     Event::TransferUpdate(file_transfer_id, total_decrypted_bytes) => {
                         tauri_app_handle_c
@@ -43,19 +44,20 @@ impl Client {
                             )
                             .unwrap();
                     }
-                    Event::ReceivingFile(file_transfer_id, flap_file_metadata) => {
+                    Event::PreparingFile(file_transfer_id, flap_file_metadata, sending) => {
                         let file_size = flap_file_metadata.file_size;
                         let file_name = flap_file_metadata.file_name;
-                        println!("{file_transfer_id:?}");
+                        println!("Preparing file event: {file_transfer_id:?}");
                         tauri_app_handle_c
                             .emit(
-                                "receiving-file",
-                                frontend_events::ReceivingFileEvent {
+                                "preparing-file",
+                                frontend_events::PreparingFileEvent {
                                     file_transfer_id: file_transfer_id.as_ref().to_vec(),
                                     metadata: frontend_events::FileMetadata {
                                         file_name,
                                         expected_file_size: file_size,
                                     },
+                                    sending,
                                 },
                             )
                             .unwrap();

@@ -3,6 +3,7 @@ use rand::{TryRngCore, rngs::OsRng};
 pub mod file_key;
 pub mod master_key;
 pub mod nonce;
+pub mod transfer_id;
 
 pub fn random_array<const N: usize>() -> [u8; N] {
     let mut array = [0u8; N];
