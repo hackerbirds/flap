@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "flap-app",
+  "productName": "Flap",
   "version": "0.1.0",
   "identifier": "org.bird.flap",
   "build": {
@@ -26,7 +26,9 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "icons/flap-icon.png"
+      "icons/icon.png",
+      "icons/icon.jpg",
+      "icons/icon.ico"
     ]
   }
 }
