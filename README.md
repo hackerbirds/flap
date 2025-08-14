@@ -45,4 +45,9 @@ We use <a href="https://iroh.computer">iroh</a>, creating a peer-to-peer connect
 
 ### "HOW ARE MY FILES ENCRPYTED?"
 
-Files are encrypted using secret keys generated from the ticket. Thanks to the design of tickets, no one but you and the recipient knows how to decrypt the file. The encryption used is <code>XChaCha20-Poly1305</code>, which is fast, modern, well-known, and verifies the integrity of the file as it gets transferred.
+Files are encrypted using secret keys generated using the ticket. Thanks to the design of tickets, no one but you and the recipient knows how to decrypt the file. The <a href="https://noiseprotocol.org/">Noise protocol</a> is used as the foundation for encryption. The cryptography primitives we use are:
+- `ChaCha20-Poly1305` for the AEAD, which is fast, modern, well-known, and verifies the integrity of the file as it gets transferred.
+- `Curve25519` for the DH operations
+    - Note: iroh uses `ed25519` keys for authenticating p2p endpoints, and we use a clever trick to convert these keys into `X25519` keys used for Noise.
+- `Kyber1024` as the Hybrid KEM
+- `Blake2s` as the hash function
