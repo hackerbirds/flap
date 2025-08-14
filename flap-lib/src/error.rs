@@ -6,6 +6,8 @@ pub type Result<T> = core::prelude::v1::Result<T, Error>;
 pub enum Error {
     #[error("unknown error")]
     Unknown,
+    #[error("frame serialization error")]
+    SerializationError,
     #[error("P2P accept error")]
     AcceptError(#[from] iroh::protocol::AcceptError),
     #[error("P2P connection error")]
@@ -17,13 +19,17 @@ pub enum Error {
     #[error("P2P write error")]
     WriteError(#[from] iroh::endpoint::WriteError),
     #[error("P2P receive error")]
-    ReadToEndError(#[from] iroh::endpoint::ReadToEndError),
+    ReadError(#[from] iroh::endpoint::ReadError),
+    #[error("P2P receive error")]
+    ReadExactError(#[from] iroh::endpoint::ReadExactError),
     #[error("P2P connection closed")]
     ClosedStream(#[from] iroh::endpoint::ClosedStream),
     #[error("Could not prepare file to encrypt")]
     MpscSendError,
     #[error("Could not encrypt/decrypt file. Encryption key or nonce is likely invalid.")]
     AeadError(#[from] aead::Error),
+    #[error("An error occured in the encryption stream")]
+    SnowError(#[from] snow::Error),
     #[error("Could not read ticket. Ticket is invalid")]
     TicketParseError,
     #[error("Could not read ticket's master key. Master key is invalid")]

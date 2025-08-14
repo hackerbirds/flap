@@ -2,11 +2,11 @@ use iroh::endpoint::ConnectionError;
 use tokio::task::JoinSet;
 
 use crate::{
-    crypto::transfer_id::TransferId,
+    crypto::encryption_stream::EncryptionStream,
     error::Result,
-    file_stream::FileDecryptor,
+    event::{Event, get_event_handler},
     fs::save::FileSaver,
-    p2p::{ALPN, P2pEndpoint},
+    p2p::{ALPN, endpoint::P2pEndpoint},
     ticket::Ticket,
 };
 
@@ -33,7 +33,6 @@ impl P2pReceiver {
         println!("Connection established");
 
         let file_saver = FileSaver::new().await;
-
         // The set of all file decryptor streams.
         let mut file_streams: JoinSet<Result<()>> = JoinSet::new();
 
@@ -48,12 +47,51 @@ impl P2pReceiver {
                     }
                 },
                 res = connection.accept_bi() => {
+                    println!("Stream open");
                     match res {
-                        Ok((_stream_tx, stream_rx)) => {
+                        Ok((stream_tx, stream_rx)) => {
                             // New file
-                            let file_transfer_id = TransferId::new(&ticket, stream_rx.id());
+                            let mut encrypted_stream = EncryptionStream::initiate(
+                                false,
+                                self.p2p_endpoint.secret_key(),
+                                &connection.remote_node_id().unwrap(),
+                                stream_tx,
+                                stream_rx,
+                                &ticket,
+                            )
+                            .await
+                            .expect("noise handshake succeeds");
 
-                            file_streams.spawn(FileDecryptor::launch(ticket.clone(), file_transfer_id, stream_rx, file_saver.clone()));
+                            encrypted_stream.send_ready().await.unwrap();
+
+                            let file_metadata = encrypted_stream.get_file_metadata().await.unwrap();
+                            let mut file = file_saver.prepare_file(&file_metadata.file_name).await.unwrap();
+
+                            get_event_handler().send_event(Event::PreparingFile(
+                                encrypted_stream.transfer_id(),
+                                file_metadata,
+                                false
+                            ));
+
+                            let mut total_bytes_received = 0;
+                            let fut = async move {
+                                loop {
+                                    if let Ok(bytes_received) = encrypted_stream.recv_next_file_block(&mut file).await {
+                                        // TODO: Ability to pause transfer
+                                        total_bytes_received += bytes_received;
+                                        get_event_handler().send_event(Event::TransferUpdate(
+                                            encrypted_stream.transfer_id(),
+                                            total_bytes_received as u64
+                                        ));
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                Ok(())
+                            };
+
+                            file_streams.spawn(fut);
                         },
                         Err(ConnectionError::LocallyClosed) => { println!("Stream closed") }
                         Err(err) => {

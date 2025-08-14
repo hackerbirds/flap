@@ -9,10 +9,10 @@ pub const MAX_METADATA_LENGTH_ALLOWED: u64 = 1 << 13; // 8kB max
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FlapFileMetadata {
     // TODO: We will allow dirs in the duture
-    is_file: bool,
+    pub(crate) is_file: bool,
     // If this is a directory, list files inside directory
     // We only support files for now
-    dir_file_entries: Option<Vec<FlapFileMetadata>>,
+    pub(crate) dir_file_entries: Option<Vec<FlapFileMetadata>>,
     pub file_size: u64,
     pub file_name: String,
 }
@@ -47,7 +47,7 @@ impl FlapFileMetadata {
         }
     }
 
-    pub fn to_bytes(self) -> Bytes {
+    pub fn to_bytes(&self) -> Bytes {
         let mut metadata_bytes = BytesMut::new();
         metadata_bytes.put_u64(self.file_size);
         metadata_bytes.put_slice(self.file_name.as_bytes());

@@ -1,8 +1,6 @@
 use std::ops::Deref;
 
-use crate::error::Result;
-
-pub const ALPN: &[u8] = b"flap-p2p-transfer";
+use crate::{error::Result, p2p::ALPN};
 
 #[derive(Debug, Clone)]
 pub struct P2pEndpoint(iroh::Endpoint);

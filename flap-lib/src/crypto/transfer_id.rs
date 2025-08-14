@@ -5,7 +5,7 @@ use crate::ticket::Ticket;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// Unique per file transfer
-pub struct TransferId([u8; 32]);
+pub struct TransferId(pub [u8; 32]);
 
 impl TransferId {
     pub fn new(ticket: &Ticket, stream_id: StreamId) -> TransferId {

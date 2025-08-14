@@ -31,7 +31,7 @@ impl Client {
         let _event_task = async_runtime::spawn(async move {
             let event_handler = get_event_handler();
             while let Some(event) = event_handler.get_receiver().await.recv().await {
-                println!("Event: {event:?}");
+                // println!("Event: {event:?}");
                 match event {
                     Event::TransferUpdate(file_transfer_id, total_decrypted_bytes) => {
                         tauri_app_handle_c

@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use bytes::BytesMut;
 use iroh::{
     Watcher,
     endpoint::Connection,
@@ -16,18 +17,16 @@ use tokio::{
 };
 
 use crate::{
-    crypto::{master_key::MasterKey, transfer_id::TransferId},
+    crypto::{encryption_stream::EncryptionStream, master_key::MasterKey},
     error::{Error, Result},
     event::{Event, get_event_handler},
-    file_stream::FileEncryptor,
     fs::metadata::FlapFileMetadata,
-    p2p::{ALPN, P2pEndpoint},
+    p2p::{ALPN, endpoint::P2pEndpoint},
     ticket::Ticket,
 };
 
 #[derive(Debug, Clone)]
 pub struct P2pSender {
-    #[expect(dead_code)]
     p2p_endpoint: P2pEndpoint,
     files_queue_tx: mpsc::UnboundedSender<PathBuf>,
     files_queue_rx: Arc<Mutex<mpsc::UnboundedReceiver<PathBuf>>>,
@@ -87,27 +86,61 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
         let files_queue_rx = self.files_queue_rx.clone();
         Box::pin(async move {
             while let Some(file_path) = files_queue_rx.lock().await.recv().await {
-                let (mut file_stream_tx, _file_stream_rx) = connection.open_bi().await.unwrap();
+                let (file_stream_tx, file_stream_rx) = connection.open_bi().await.unwrap();
+
+                println!("Opened stream");
+
+                let mut encrypted_stream = EncryptionStream::initiate(
+                    true,
+                    self.p2p_endpoint.secret_key(),
+                    &connection.remote_node_id().unwrap(),
+                    file_stream_tx,
+                    file_stream_rx,
+                    &self.ticket,
+                )
+                .await
+                .expect("noise handshake succeeds");
 
                 let file_metadata = FlapFileMetadata::from_path(&file_path).await;
-                let file = File::open(file_path).await.unwrap();
-
-                let file_transfer_id = TransferId::new(&self.ticket, file_stream_tx.id());
-                let file_stream =
-                    FileEncryptor::from_file(file, *self.ticket.master_key(), file_transfer_id);
 
                 get_event_handler().send_event(Event::PreparingFile(
-                    file_transfer_id,
+                    encrypted_stream.transfer_id(),
                     file_metadata.clone(),
                     true,
                 ));
 
-                file_stream
-                    .encrypt(file_metadata, &mut file_stream_tx)
-                    .await
-                    .unwrap();
+                encrypted_stream.wait_for_ready().await.expect("stream ok");
 
-                file_stream_tx.finish().unwrap();
+                encrypted_stream
+                    .send_file_metadata(file_metadata)
+                    .await
+                    .expect("file metadata sends");
+
+                let mut file = File::open(file_path).await.unwrap();
+                let mut count = 0;
+                let mut file_buf = BytesMut::zeroed(1 << 15);
+
+                loop {
+                    match encrypted_stream
+                        .send_next_file_block(&mut file, &mut file_buf)
+                        .await
+                    {
+                        Ok(0) => {
+                            get_event_handler().send_event(Event::TransferComplete(
+                                encrypted_stream.transfer_id(),
+                            ));
+                        }
+                        Ok(bytes_read) => {
+                            count += bytes_read;
+
+                            get_event_handler().send_event(Event::TransferUpdate(
+                                encrypted_stream.transfer_id(),
+                                count as u64,
+                            ));
+                        }
+                        Err(e) => panic!("{}", e),
+                    }
+                }
             }
 
             Ok(())
