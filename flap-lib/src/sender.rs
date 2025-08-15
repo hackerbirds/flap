@@ -129,6 +129,8 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                             get_event_handler().send_event(Event::TransferComplete(
                                 encrypted_stream.transfer_id(),
                             ));
+
+                            break;
                         }
                         Ok(bytes_read) => {
                             count += bytes_read;
@@ -138,7 +140,7 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                                 count as u64,
                             ));
                         }
-                        Err(e) => panic!("{}", e),
+                        Err(e) => panic!("{e}"),
                     }
                 }
             }

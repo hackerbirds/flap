@@ -65,26 +65,37 @@ impl P2pReceiver {
                             encrypted_stream.send_ready().await.unwrap();
 
                             let file_metadata = encrypted_stream.get_file_metadata().await.unwrap();
-                            let mut file = file_saver.prepare_file(&file_metadata.file_name).await.unwrap();
+                            let mut file = file_saver.prepare_file(&file_metadata).await.unwrap();
 
                             get_event_handler().send_event(Event::PreparingFile(
                                 encrypted_stream.transfer_id(),
-                                file_metadata,
+                                file_metadata.clone(),
                                 false
                             ));
 
+                            let file_saver_c = file_saver.clone();
                             let mut total_bytes_received = 0;
                             let fut = async move {
                                 loop {
-                                    if let Ok(bytes_received) = encrypted_stream.recv_next_file_block(&mut file).await {
-                                        // TODO: Ability to pause transfer
-                                        total_bytes_received += bytes_received;
-                                        get_event_handler().send_event(Event::TransferUpdate(
-                                            encrypted_stream.transfer_id(),
-                                            total_bytes_received as u64
-                                        ));
-                                    } else {
-                                        break;
+                                    match encrypted_stream.recv_next_file_block(&mut file).await {
+                                        Ok(0) => {
+                                            file_saver_c.finish_file(&file_metadata).await.unwrap();
+
+                                            get_event_handler().send_event(Event::TransferComplete(
+                                                encrypted_stream.transfer_id()
+                                            ));
+
+                                            break;
+                                        }, 
+                                        Ok(bytes_received) => {
+                                            // TODO: Ability to pause transfer
+                                            total_bytes_received += bytes_received;
+                                            get_event_handler().send_event(Event::TransferUpdate(
+                                                encrypted_stream.transfer_id(),
+                                                total_bytes_received as u64
+                                            ));
+                                        },
+                                        Err(e) => panic!("{e}")
                                     }
                                 }
 

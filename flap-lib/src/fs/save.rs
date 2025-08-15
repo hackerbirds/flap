@@ -1,8 +1,8 @@
 use std::{io::ErrorKind, path::PathBuf};
 
-use tokio::fs::{DirBuilder, File};
+use tokio::fs::{self, DirBuilder, File};
 
-use crate::error::Result;
+use crate::{error::Result, fs::metadata::FlapFileMetadata};
 
 #[derive(Debug, Clone)]
 pub struct FileSaver {
@@ -31,10 +31,26 @@ impl FileSaver {
         Self { download_dir }
     }
 
-    pub async fn prepare_file(&self, file_name: &str) -> Result<File> {
+    pub async fn prepare_file(&self, metadata: &FlapFileMetadata) -> Result<File> {
+        let mut file_name = metadata.file_name.clone();
+        file_name.push_str(".flap");
+
         let file_path = self.download_dir.join(file_name);
         let file: File = File::create_new(file_path).await?;
 
         Ok(file)
+    }
+
+    pub async fn finish_file(&self, metadata: &FlapFileMetadata) -> Result<()> {
+        let file_name = metadata.file_name.clone();
+        let mut file_name_with_flap_ext = metadata.file_name.clone();
+        file_name_with_flap_ext.push_str(".flap");
+
+        let file_path = self.download_dir.join(file_name);
+        let file_path_with_ext = self.download_dir.join(file_name_with_flap_ext);
+
+        fs::rename(file_path_with_ext, file_path).await?;
+
+        Ok(())
     }
 }
