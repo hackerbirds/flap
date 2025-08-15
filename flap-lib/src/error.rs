@@ -40,4 +40,6 @@ pub enum Error {
     FileAlreadyAdded,
     #[error("Filesystem IO error")]
     FileIoError(#[from] std::io::Error),
+    #[error("The final file hash is invalid")]
+    InvalidBlake3Hash,
 }

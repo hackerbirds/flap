@@ -12,7 +12,7 @@ use tokio::{
 };
 
 use crate::{
-    crypto::{transfer_id::TransferId, x25519},
+    crypto::{blake3::Blake3, transfer_id::TransferId, x25519},
     error::{Error, Result},
     fs::metadata::FlapFileMetadata,
     p2p::frame::Frame,
@@ -29,6 +29,7 @@ pub struct EncryptionStream {
     recv_stream: RecvStream,
     send_buffer: Vec<u8>,
     recv_buffer: Vec<u8>,
+    file_hash: Blake3,
     noise: TransportState,
     transfer_id: TransferId,
 }
@@ -44,6 +45,7 @@ impl EncryptionStream {
     ) -> Result<Self> {
         let mut send_buffer = vec![0u8; MAX_NOISE_MESSAGE_LENGTH];
         let mut recv_buffer = vec![0u8; MAX_NOISE_MESSAGE_LENGTH];
+        let file_hash = Blake3::default();
 
         let stream_id = VarInt::from(send_stream.id()).into_inner().to_be_bytes();
         let file_key = ticket.master_key().file_key();
@@ -106,6 +108,7 @@ impl EncryptionStream {
         Ok(Self {
             send_stream,
             recv_stream,
+            file_hash,
             send_buffer,
             recv_buffer,
             noise,
@@ -189,6 +192,7 @@ impl EncryptionStream {
     pub async fn recv_next_file_block(&mut self, file: &mut File) -> Result<usize> {
         match self.read_frame().await? {
             Frame::FileData(file_data) => {
+                self.file_hash.update_hasher(&file_data);
                 match file.write_all(&file_data).await {
                     Err(e) => {
                         if e.kind() == ErrorKind::UnexpectedEof {
@@ -205,11 +209,17 @@ impl EncryptionStream {
                     _ => Ok(file_data.len()),
                 }
             }
-            Frame::EOF => {
+            Frame::TransferComplete(sender_file_hash) => {
+                let our_file_hash = self.file_hash.finalize_hash();
                 file.sync_all().await?;
-                println!("File received successfully");
 
-                Ok(0)
+                if sender_file_hash != our_file_hash {
+                    Err(Error::InvalidBlake3Hash)
+                } else {
+                    println!("File received successfully");
+
+                    Ok(0)
+                }
             }
             _ => unreachable!("file decryption shouldn't contain other types of frames"),
         }
@@ -223,12 +233,15 @@ impl EncryptionStream {
         let bytes_read = file.read(file_buf).await?;
 
         if bytes_read == 0 {
-            println!("Sending EOF");
-            self.write_frame(Frame::EOF).await?;
+            let final_file_hash = self.file_hash.finalize_hash();
+
+            self.write_frame(Frame::TransferComplete(final_file_hash))
+                .await?;
             self.send_stream.finish()?;
 
             Ok(0)
         } else {
+            self.file_hash.update_hasher(&file_buf);
             self.write_frame(Frame::FileData(file_buf.clone().freeze()))
                 .await?;
 

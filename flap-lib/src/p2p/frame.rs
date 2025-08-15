@@ -1,7 +1,8 @@
 use bytes::{Buf, BufMut, Bytes};
 
 use crate::{
-    crypto::encryption_stream::MAX_NOISE_MESSAGE_LENGTH, error::Result,
+    crypto::{blake3::FileHash, encryption_stream::MAX_NOISE_MESSAGE_LENGTH},
+    error::{Error, Result},
     fs::metadata::FlapFileMetadata,
 };
 
@@ -14,7 +15,7 @@ pub enum Frame {
     // msg = 0x03
     IWillSendEntireFile(FlapFileMetadata),
     // msg = 0x04
-    EOF,
+    TransferComplete(FileHash),
 }
 
 pub(crate) const MAX_FRAME_OPTIONAL_DATA_SIZE: usize = MAX_NOISE_MESSAGE_LENGTH - size_of::<u8>();
@@ -43,8 +44,9 @@ impl Frame {
                 vec.put_u8(0x03);
                 vec.put_slice(bytes.as_ref());
             }
-            Frame::EOF => {
+            Frame::TransferComplete(file_hash) => {
                 vec.put_u8(0x04);
+                vec.put_slice(file_hash);
             }
         }
 
@@ -65,7 +67,12 @@ impl Frame {
                 let metadata = FlapFileMetadata::from_bytes(frame).await;
                 Ok(Self::IWillSendEntireFile(metadata))
             }
-            0x04 => Ok(Self::EOF),
+            0x04 => Ok(Self::TransferComplete(
+                frame
+                    .as_ref()
+                    .try_into()
+                    .map_err(|_| Error::InvalidBlake3Hash)?,
+            )),
             _ => panic!("Invalid message header"),
         }
     }

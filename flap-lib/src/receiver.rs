@@ -86,7 +86,7 @@ impl P2pReceiver {
                                             ));
 
                                             break;
-                                        }, 
+                                        },
                                         Ok(bytes_received) => {
                                             // TODO: Ability to pause transfer
                                             total_bytes_received += bytes_received;

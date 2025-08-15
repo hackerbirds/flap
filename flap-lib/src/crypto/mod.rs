@@ -1,5 +1,6 @@
 use rand::{TryRngCore, rngs::OsRng};
 
+pub mod blake3;
 pub mod encryption_stream;
 pub mod file_key;
 pub mod master_key;
