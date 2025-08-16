@@ -30,12 +30,17 @@ impl Blake3 {
     ///
     /// Used for resuming a partially completed transfer, since we still want
     /// to verify the hash of the entire file.
-    pub async fn partial_hash(file: &mut File, seek: Option<u64>) -> Result<Self> {
+    ///
+    /// Reads up to `max` bytes. In our case, `max` is the file length of the
+    /// partial file the receiver already has. The sender has the full file, so
+    /// they want to read only up to the portion the receiver has to get the partial
+    /// hash.
+    pub async fn partial_hash(file: &mut File, max: Option<u64>) -> Result<Self> {
         let mut hasher = Self::default();
         const BUF_SIZE: usize = 1 << 16;
         let mut total_read = 0;
         let mut file_buf = BytesMut::zeroed(BUF_SIZE);
-        let max_seek = seek.unwrap_or(file.metadata().await?.len()) as usize;
+        let max_seek = max.unwrap_or(file.metadata().await?.len()) as usize;
         loop {
             match file.read(&mut file_buf).await? {
                 0 => break,
