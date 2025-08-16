@@ -1,3 +1,8 @@
+use bytes::BytesMut;
+use tokio::{fs::File, io::AsyncReadExt};
+
+use crate::error::Result;
+
 pub type FileHash = [u8; 32];
 
 /// A `blake3` hasher, used to verify that the final
@@ -19,5 +24,33 @@ impl Blake3 {
 
     pub fn finalize_hash(&mut self) -> FileHash {
         self.0.finalize().into()
+    }
+
+    /// Reads entire file given and returns the hasher in its current state.
+    ///
+    /// Used for resuming a partially completed transfer, since we still want
+    /// to verify the hash of the entire file.
+    pub async fn partial_hash(file: &mut File, seek: Option<u64>) -> Result<Self> {
+        let mut hasher = Self::default();
+        const BUF_SIZE: usize = 1 << 16;
+        let mut total_read = 0;
+        let mut file_buf = BytesMut::zeroed(BUF_SIZE);
+        let max_seek = seek.unwrap_or(file.metadata().await?.len()) as usize;
+        loop {
+            match file.read(&mut file_buf).await? {
+                0 => break,
+                len => {
+                    if max_seek > 0 && max_seek - total_read < len {
+                        hasher.update_hasher(&file_buf[0..max_seek - total_read]);
+                        break;
+                    } else {
+                        hasher.update_hasher(&file_buf[0..len]);
+                        total_read += len;
+                    }
+                }
+            }
+        }
+
+        Ok(hasher)
     }
 }

@@ -1,8 +1,18 @@
-use std::{io::ErrorKind, path::PathBuf};
+use std::{
+    io::{ErrorKind, SeekFrom},
+    path::PathBuf,
+};
 
-use tokio::fs::{self, DirBuilder, File};
+use tokio::{
+    fs::{self, DirBuilder, File},
+    io::AsyncSeekExt,
+};
 
-use crate::{error::Result, fs::metadata::FlapFileMetadata};
+use crate::{
+    crypto::blake3::Blake3,
+    error::{Error, Result},
+    fs::metadata::FlapFileMetadata,
+};
 
 #[derive(Debug, Clone)]
 pub struct FileSaver {
@@ -31,14 +41,35 @@ impl FileSaver {
         Self { download_dir }
     }
 
-    pub async fn prepare_file(&self, metadata: &FlapFileMetadata) -> Result<File> {
+    pub async fn prepare_file(
+        &self,
+        metadata: &FlapFileMetadata,
+    ) -> Result<(File, u64, Option<Blake3>)> {
         let mut file_name = metadata.file_name.clone();
         file_name.push_str(".flap");
 
         let file_path = self.download_dir.join(file_name);
-        let file: File = File::create_new(file_path).await?;
+        match File::create_new(&file_path).await {
+            Ok(file) => Ok((file, 0, None)),
+            Err(e) => {
+                if matches!(e.kind(), ErrorKind::AlreadyExists) {
+                    // Open with seek
+                    let mut file = File::options()
+                        .append(true)
+                        .read(true)
+                        .open(file_path)
+                        .await?;
+                    let file_len = file.metadata().await?.len();
+                    let hasher = Blake3::partial_hash(&mut file, None).await?;
 
-        Ok(file)
+                    file.seek(SeekFrom::Start(file_len)).await?;
+
+                    Ok((file, file_len, Some(hasher)))
+                } else {
+                    Err(Error::FileIoError(e))
+                }
+            }
+        }
     }
 
     pub async fn finish_file(&self, metadata: &FlapFileMetadata) -> Result<()> {

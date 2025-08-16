@@ -1,5 +1,6 @@
 use std::{
     collections::HashSet,
+    io::SeekFrom,
     ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
@@ -13,11 +14,12 @@ use iroh::{
 };
 use tokio::{
     fs::File,
+    io::AsyncSeekExt,
     sync::{Mutex, mpsc},
 };
 
 use crate::{
-    crypto::{encryption_stream::EncryptionStream, master_key::MasterKey},
+    crypto::{blake3::Blake3, encryption_stream::EncryptionStream, master_key::MasterKey},
     error::{Error, Result},
     event::{Event, get_event_handler},
     fs::metadata::FlapFileMetadata,
@@ -109,14 +111,24 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                     true,
                 ));
 
-                encrypted_stream.wait_for_ready().await.expect("stream ok");
-
                 encrypted_stream
                     .send_file_metadata(file_metadata)
                     .await
                     .expect("file metadata sends");
 
+                let seek = encrypted_stream.wait_for_ready().await.expect("stream ok");
+
                 let mut file = File::open(file_path).await.unwrap();
+
+                if seek != 0 {
+                    encrypted_stream.set_file_hasher(
+                        Blake3::partial_hash(&mut file, Some(seek))
+                            .await
+                            .expect("File can be read and hashed"),
+                    );
+                    file.seek(SeekFrom::Start(seek)).await?;
+                }
+
                 let mut count = 0;
                 let mut file_buf = BytesMut::zeroed(1 << 15);
 
@@ -140,7 +152,9 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                                 count as u64,
                             ));
                         }
-                        Err(e) => panic!("{e}"),
+                        Err(e) => {
+                            panic!("{e}");
+                        }
                     }
                 }
             }

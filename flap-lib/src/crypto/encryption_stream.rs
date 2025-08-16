@@ -1,5 +1,6 @@
 use std::io::ErrorKind;
 
+use base64ct::Encoding;
 use bytes::BytesMut;
 use iroh::{
     PublicKey, SecretKey,
@@ -136,6 +137,10 @@ impl EncryptionStream {
         Ok(msg_len as usize)
     }
 
+    pub fn set_file_hasher(&mut self, hasher: Blake3) {
+        self.file_hash = hasher;
+    }
+
     pub fn transfer_id(&self) -> TransferId {
         self.transfer_id
     }
@@ -162,29 +167,28 @@ impl EncryptionStream {
         Ok(())
     }
 
-    pub async fn send_ready(&mut self) -> Result<()> {
-        self.write_frame(Frame::PleaseSendEntireFile).await?;
+    pub async fn send_ready(&mut self, seek: u64) -> Result<()> {
+        self.write_frame(Frame::PleaseSendFile(seek)).await?;
 
         Ok(())
     }
 
-    pub async fn wait_for_ready(&mut self) -> Result<()> {
+    pub async fn wait_for_ready(&mut self) -> Result<u64> {
         match self.read_frame().await? {
-            Frame::PleaseSendEntireFile => Ok(()),
+            Frame::PleaseSendFile(seek) => Ok(seek),
             _ => panic!("unexpected response from sender"),
         }
     }
 
     pub async fn get_file_metadata(&mut self) -> Result<FlapFileMetadata> {
         match self.read_frame().await? {
-            Frame::IWillSendEntireFile(metadata) => Ok(metadata),
+            Frame::IWillSendThisFile(metadata) => Ok(metadata),
             _ => panic!("unexpected response from sender"),
         }
     }
 
     pub async fn send_file_metadata(&mut self, metadata: FlapFileMetadata) -> Result<()> {
-        self.write_frame(Frame::IWillSendEntireFile(metadata))
-            .await?;
+        self.write_frame(Frame::IWillSendThisFile(metadata)).await?;
 
         Ok(())
     }
@@ -200,17 +204,24 @@ impl EncryptionStream {
                             // at the end of the file. Therefore this is the
                             // EOF of the file that was sent to us.
                             // At this point the entire file should have been written.
+                            file.flush().await?;
+
                             Ok(0)
                         } else {
                             // Other, actual I/O error.
                             Err(Error::FileIoError(e))
                         }
                     }
-                    _ => Ok(file_data.len()),
+                    _ => {
+                        file.flush().await?;
+
+                        Ok(file_data.len())
+                    }
                 }
             }
             Frame::TransferComplete(sender_file_hash) => {
                 let our_file_hash = self.file_hash.finalize_hash();
+                println!("{}", base64ct::Base64::encode_string(&our_file_hash));
                 file.sync_all().await?;
 
                 if sender_file_hash != our_file_hash {

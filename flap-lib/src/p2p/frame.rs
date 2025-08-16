@@ -11,9 +11,9 @@ pub enum Frame {
     // msg = 0x01
     FileData(Bytes),
     // msg = 0x02
-    PleaseSendEntireFile,
+    PleaseSendFile(u64 /* seek amount */),
     // msg = 0x03
-    IWillSendEntireFile(FlapFileMetadata),
+    IWillSendThisFile(FlapFileMetadata),
     // msg = 0x04
     TransferComplete(FileHash),
 }
@@ -35,10 +35,11 @@ impl Frame {
                 vec.put_u8(0x01);
                 vec.put_slice(bytes.as_ref());
             }
-            Frame::PleaseSendEntireFile => {
+            Frame::PleaseSendFile(seek) => {
                 vec.put_u8(0x02);
+                vec.put_u64(*seek);
             }
-            Frame::IWillSendEntireFile(flap_file_metadata) => {
+            Frame::IWillSendThisFile(flap_file_metadata) => {
                 let bytes = flap_file_metadata.to_bytes();
                 debug_assert!(bytes.len() <= MAX_FRAME_OPTIONAL_DATA_SIZE);
                 vec.put_u8(0x03);
@@ -62,16 +63,21 @@ impl Frame {
 
         match msg {
             0x01 => Ok(Self::FileData(frame)),
-            0x02 => Ok(Self::PleaseSendEntireFile),
+            0x02 => Ok(Self::PleaseSendFile(u64::from_be_bytes(
+                frame
+                    .as_ref()
+                    .try_into()
+                    .map_err(|_| Error::SerializationError)?,
+            ))),
             0x03 => {
                 let metadata = FlapFileMetadata::from_bytes(frame).await;
-                Ok(Self::IWillSendEntireFile(metadata))
+                Ok(Self::IWillSendThisFile(metadata))
             }
             0x04 => Ok(Self::TransferComplete(
                 frame
                     .as_ref()
                     .try_into()
-                    .map_err(|_| Error::InvalidBlake3Hash)?,
+                    .map_err(|_| Error::SerializationError)?,
             )),
             _ => panic!("Invalid message header"),
         }
@@ -84,16 +90,16 @@ mod tests {
 
     #[tokio::test]
     pub async fn basic_frame_roundtrip() {
-        let frame1 = Frame::PleaseSendEntireFile;
+        let frame1 = Frame::PleaseSendFile(0);
 
-        let frame2 = Frame::IWillSendEntireFile(FlapFileMetadata {
+        let frame2 = Frame::IWillSendThisFile(FlapFileMetadata {
             is_file: true,
             dir_file_entries: None,
             file_size: 1,
             file_name: "a".to_string(),
         });
 
-        let frame3 = Frame::PleaseSendEntireFile;
+        let frame3 = Frame::PleaseSendFile(100);
 
         /* roundtrip */
         let frame1_roundtrip = Frame::read_from_frame(frame1.to_bytes().into())

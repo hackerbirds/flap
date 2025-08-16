@@ -62,10 +62,14 @@ impl P2pReceiver {
                             .await
                             .expect("noise handshake succeeds");
 
-                            encrypted_stream.send_ready().await.unwrap();
-
                             let file_metadata = encrypted_stream.get_file_metadata().await.unwrap();
-                            let mut file = file_saver.prepare_file(&file_metadata).await.unwrap();
+                            let (mut file, seek, hash) = file_saver.prepare_file(&file_metadata).await.unwrap();
+
+                            if let Some(partial_hash) = hash {
+                                encrypted_stream.set_file_hasher(partial_hash);
+                            }
+
+                            encrypted_stream.send_ready(seek).await.unwrap();
 
                             get_event_handler().send_event(Event::PreparingFile(
                                 encrypted_stream.transfer_id(),
@@ -95,7 +99,7 @@ impl P2pReceiver {
                                                 total_bytes_received as u64
                                             ));
                                         },
-                                        Err(e) => panic!("{e}")
+                                        Err(e) => { return Err(e); }
                                     }
                                 }
 
