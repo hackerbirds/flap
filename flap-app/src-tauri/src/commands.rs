@@ -2,7 +2,7 @@ use crate::client::Client;
 
 #[tauri::command]
 pub async fn send_file(client: tauri::State<'_, Client>, file_path: String) -> Result<(), ()> {
-    println!("Prepare file");
+    println!("Preparing to send file {file_path}");
     client.send_file(file_path).await;
 
     Ok(())

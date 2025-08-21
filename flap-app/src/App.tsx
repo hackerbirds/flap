@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from '@tauri-apps/api/event'
+import { open } from '@tauri-apps/plugin-dialog';
+// when using `"withGlobalTauri": true`, you may use
+// const { open } = window.__TAURI__.dialog;
 
 type TransferId = Uint8Array;
 
@@ -36,38 +39,80 @@ type TransferCompleteEvent = {
 function App() {
   const [sendTicket, setSendTicket] = useState("");
   const [receiveTicket, setReceiveTicket] = useState("");
-  const [filePath, setFilePath] = useState("");
   const [isCrowFlying, setCrowFlying] = useState(false);
   const [transfersInProgress, setTransfersInProgress] = useState(0);
+
+  // A hacky way to map file name -> file path
+  const [pendingSendingTransfers, setPendingSendingTransfers] = useState<Map<string, string>>(new Map());
+  // The string here can be two things:
+  // - A file path (if the user is sending a file)
+  // - A transfer id (only known after initiating a transfer with a peer)
+  //   - The receiving transfers can only rely on the transfer id, but sending
+  //   transfers need a way to be stored before initiating a connection (ie before
+  //   obtaining a transfer id)
   const [transfers, setTransfers] = useState<Map<string, Transfer>>(new Map());
+  const [completedTransfers, setCompletedTransfers] = useState<FileMetadata[]>([]);
+
+  const addFile = async (filePath: string) => {
+    invoke('send_file', { filePath }).then(() => {
+      // TODO: Only for POSIX? Windows compatible? Is there a JS native way of doing this?
+      const pathSplit = filePath.split('/')
+      const fileName = pathSplit[pathSplit.length - 1]
+
+      setPendingSendingTransfers(new Map(pendingSendingTransfers).set(fileName, filePath))
+      setTransfers(new Map(transfers).set(filePath, {
+        sending: true,
+        metadata: {
+          fileName: fileName,
+          expectedFileSize: 0
+        },
+        progress: 0,
+        isCompleted: false,
+      }))
+    });
+  }
 
   useEffect(() => {
     invoke('get_send_ticket').then((ticket_string) => setSendTicket(ticket_string as string))
 
     listen<PreparingFileEvent>('preparing-file', (event) => {
       setTransfersInProgress(transfersInProgress + 1)
-      setCrowFlying(true)
-      setTransfers(new Map(transfers).set(event.payload.fileTransferId.toString(), {
+      if (transfersInProgress > 0 && !isCrowFlying)
+        setCrowFlying(true)
+
+      const newMap = new Map(transfers)
+      const fileName = event.payload.metadata.fileName;
+      const fullFilePath = pendingSendingTransfers.get(fileName)
+      if (fullFilePath)
+        newMap.delete(fullFilePath)
+
+      newMap.set(event.payload.fileTransferId.toString(), {
         sending: event.payload.sending,
         metadata: event.payload.metadata,
         progress: 0,
         isCompleted: false,
-      }))
+      })
+
+      setTransfers(newMap)
     });
 
     listen('tauri://drag-drop', event => {
-      let file_path: string = (event as any).payload.paths[0]
-      setFilePath(file_path.split('/')[-1])
-      invoke('send_file', { filePath: file_path });
+      let filePath: string = (event as any).payload.paths[0]
+      addFile(filePath)
     })
 
     listen<TransferCompleteEvent>('transfer-complete', (event) => {
-      console.log("yeah")
-      const newTransfers = new Map(transfers)
-      newTransfers.delete(event.payload.fileTransferId.toString())
-      setTransfers(newTransfers)
+      let transfer = transfers.get(event.payload.fileTransferId.toString())
+
+      if (transfer) {
+        setCompletedTransfers([...completedTransfers, transfer.metadata])
+        const newTransfers = new Map(transfers)
+        newTransfers.delete(event.payload.fileTransferId.toString())
+        setTransfers(newTransfers)
+      }
+
       // this was the last transfer
-      if (transfersInProgress === 1) {
+      if (transfersInProgress <= 1) {
         setCrowFlying(false)
       }
       setTransfersInProgress(transfersInProgress - 1)
@@ -88,6 +133,16 @@ function App() {
     })
   }, [transfers, setTransfers]);
 
+  const selectFileDialog = async () => {
+    const filePath = await open({
+      multiple: false,
+      directory: false,
+    });
+
+    if (filePath)
+      addFile(filePath)
+  }
+
   return (
     <main className="container">
       <div className="center">
@@ -103,8 +158,19 @@ function App() {
         <section id="action">
           <section id="send">
             <h1>Send a package</h1>
-            <i>{filePath}</i>
-            <span id="ticket">{sendTicket}</span>
+            <button id="select-file" onClick={selectFileDialog}>Select a file to send</button>
+            <i>Send this code to the receiver:</i>
+            <h3><span id="ticket">{sendTicket}</span></h3>
+            <div className="transfers completed">
+              {
+                [...completedTransfers].map((metadata, i) => {
+                  return <div className="completed-transfer" key={i}>
+                    <b>{metadata.fileName}</b>
+                    <h3>✓</h3>
+                  </div>
+                })
+              }
+            </div>
             <div className="transfers sending">
               {
                 [...transfers].filter(([_transfer_id, transfer]) => transfer.sending).map(([transfer_id, transfer]) => {
