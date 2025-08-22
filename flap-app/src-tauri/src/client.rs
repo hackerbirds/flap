@@ -1,7 +1,6 @@
 use flap_lib::{
     event::{get_event_handler, Event},
-    receiver::P2pReceiver,
-    sender::P2pSender,
+    p2p::{receiver::P2pReceiver, sender::P2pSender},
 };
 use tauri::{async_runtime, AppHandle, Emitter};
 

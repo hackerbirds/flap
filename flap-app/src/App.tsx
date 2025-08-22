@@ -3,8 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog';
-// when using `"withGlobalTauri": true`, you may use
-// const { open } = window.__TAURI__.dialog;
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
 type TransferId = Uint8Array;
 
@@ -53,6 +52,10 @@ function App() {
   const [transfers, setTransfers] = useState<Map<string, Transfer>>(new Map());
   const [completedTransfers, setCompletedTransfers] = useState<FileMetadata[]>([]);
 
+  const copyTicketToClipboard = async () => {
+    console.log("Copied ticket to clipboard")
+    await writeText(sendTicket);
+  }
   const addFile = async (filePath: string) => {
     invoke('send_file', { filePath }).then(() => {
       // TODO: Only for POSIX? Windows compatible? Is there a JS native way of doing this?
@@ -163,13 +166,14 @@ function App() {
         <section id="action">
           <section id="send">
             <h1>Send a package</h1>
-            <button id="select-file" onClick={selectFileDialog}>Select a file to send</button>
-            <i>Send this code to the receiver:</i>
-            <h3><span id="ticket">{sendTicket}</span></h3>
+            <div className="ticket">
+              <img src="file-plus.svg" onClick={selectFileDialog} alt="Add a new file for this transfer" height="18" />
+              <h3 onClick={copyTicketToClipboard}>{sendTicket}</h3>
+            </div>
             <div className="transfers completed">
               {
                 [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) !== undefined).map((metadata, i) => {
-                  return <div className="completed-transfer" key={i}>
+                  return <div className="completed-transfer transfer" key={i}>
                     <b>{metadata.fileName}</b>
                     <img src="check.svg" />
                   </div>

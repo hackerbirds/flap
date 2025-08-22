@@ -15,6 +15,7 @@
 
   --send-color: #5ea560;
   --send-input-bg: #3c833f;
+  --send-input-active: #39b33f;
   --receive-bg-color: #eaa3e6;
   --receive-input-bg: #986496;
 
@@ -48,6 +49,9 @@ div.center {
 
 h1 {
   text-shadow: grey 1px 1px 2px;
+  transform: rotate(-0.4deg);
+  margin-bottom: 10px;
+  text-decoration: underline;
 }
 
 section#action {
@@ -119,15 +123,33 @@ input#ticket-input {
   background-color: var(--receive-input-bg);
 }
 
-span#ticket {
-  width: fit-content;
+.ticket {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+}
+
+.ticket > img {
+  height: 26px;
+  padding: 2px;
+}
+
+.ticket > h3 {
+  height: inherit;
   padding: 0;
-  margin: 0;
-  word-break: break-all;
-  font-size: 20px;
+  padding-left: 0.2rem;
+  white-space: nowrap;
+  scrollbar-width: none;
+  overflow-x: scroll;
+  font-size: 18px;
   font-family: monospace;
   color: white;
   background-color: var(--send-input-bg);
+}
+
+.ticket > h3:active {
+  background-color: var(--send-input-active);
 }
 
 div.transfer {
@@ -135,12 +157,25 @@ div.transfer {
   flex-direction: column;
   width: 100%;
   height: fit-content;
+  padding: 0.4rem;
+  padding-bottom: 0;
+  gap: 4px;
+}
+
+div.transfer:hover {
+  background-color: var(--send-input-bg);
+}
+
+div.transfer:active {
+  background-color: var(--send-input-active);
 }
 
 div.transfer b {
-  text-overflow: ellipsis;
   white-space: nowrap;
-  overflow: hidden;
+  overflow-y: hidden;
+  overflow-x: scroll;
+  scrollbar-width: none;
+  margin-bottom: -8px;
 }
 
 div.transfer progress {
@@ -156,7 +191,6 @@ div.completed-transfer {
 div.completed-transfer b {
   width: 100%;
 }
-
 
 .crow {
   height: 50px;
