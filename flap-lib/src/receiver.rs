@@ -23,8 +23,6 @@ impl P2pReceiver {
     }
 
     pub async fn retrieve(&self, ticket: Ticket) -> Result<()> {
-        println!("Establishing connection");
-
         let connection = self
             .p2p_endpoint
             .connect(ticket.node_id.clone(), ALPN)
@@ -84,6 +82,8 @@ impl P2pReceiver {
                                     match encrypted_stream.recv_next_file_block(&mut file).await {
                                         Ok(0) => {
                                             file_saver_c.finish_file(&file_metadata).await.unwrap();
+
+                                            println!("Sending complete event");
 
                                             get_event_handler().send_event(Event::TransferComplete(
                                                 encrypted_stream.transfer_id()

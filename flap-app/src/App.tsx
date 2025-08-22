@@ -81,10 +81,13 @@ function App() {
         setCrowFlying(true)
 
       const newMap = new Map(transfers)
-      const fileName = event.payload.metadata.fileName;
-      const fullFilePath = pendingSendingTransfers.get(fileName)
-      if (fullFilePath)
-        newMap.delete(fullFilePath)
+
+      if (event.payload.sending) {
+        const fileName = event.payload.metadata.fileName;
+        const fullFilePath = pendingSendingTransfers.get(fileName)
+        if (fullFilePath)
+          newMap.delete(fullFilePath)
+      }
 
       newMap.set(event.payload.fileTransferId.toString(), {
         sending: event.payload.sending,
@@ -100,23 +103,6 @@ function App() {
       let filePath: string = (event as any).payload.paths[0]
       addFile(filePath)
     })
-
-    listen<TransferCompleteEvent>('transfer-complete', (event) => {
-      let transfer = transfers.get(event.payload.fileTransferId.toString())
-
-      if (transfer) {
-        setCompletedTransfers([...completedTransfers, transfer.metadata])
-        const newTransfers = new Map(transfers)
-        newTransfers.delete(event.payload.fileTransferId.toString())
-        setTransfers(newTransfers)
-      }
-
-      // this was the last transfer
-      if (transfersInProgress <= 1) {
-        setCrowFlying(false)
-      }
-      setTransfersInProgress(transfersInProgress - 1)
-    })
   }, []);
 
   useEffect(() => {
@@ -130,6 +116,25 @@ function App() {
           isCompleted: false,
         }))
       }
+    })
+
+    listen<TransferCompleteEvent>('transfer-complete', (event) => {
+      let transfer = transfers.get(event.payload.fileTransferId.toString())
+
+      console.log("Transfer completed event received")
+
+      if (transfer) {
+        setCompletedTransfers([...completedTransfers, transfer.metadata])
+        const newTransfers = new Map(transfers)
+        newTransfers.delete(event.payload.fileTransferId.toString())
+        setTransfers(newTransfers)
+      }
+
+      // this was the last transfer
+      if (transfersInProgress <= 1) {
+        setCrowFlying(false)
+      }
+      setTransfersInProgress(transfersInProgress - 1)
     })
   }, [transfers, setTransfers]);
 
@@ -163,10 +168,10 @@ function App() {
             <h3><span id="ticket">{sendTicket}</span></h3>
             <div className="transfers completed">
               {
-                [...completedTransfers].map((metadata, i) => {
+                [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) !== undefined).map((metadata, i) => {
                   return <div className="completed-transfer" key={i}>
                     <b>{metadata.fileName}</b>
-                    <h3>✓</h3>
+                    <img src="check.svg" />
                   </div>
                 })
               }
@@ -205,6 +210,16 @@ function App() {
                   return <div className="transfer" key={transfer_id}>
                     <b>{transfer.metadata.fileName}</b>
                     <progress max="100" value={transfer.progress}></progress>
+                  </div>
+                })
+              }
+            </div>
+            <div className="transfers completed">
+              {
+                [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) === undefined).map((metadata, i) => {
+                  return <div className="completed-transfer" key={i}>
+                    <b>{metadata.fileName}</b>
+                    <img src="check.svg" />
                   </div>
                 })
               }
