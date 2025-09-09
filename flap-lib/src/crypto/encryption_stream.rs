@@ -20,6 +20,9 @@ use crate::{
     ticket::Ticket,
 };
 
+#[cfg(feature = "tracing")]
+use tracing::info;
+
 static NOISE_PATTERN: &'static str = "Noise_KKhfs+psk2_25519+Kyber1024_ChaChaPoly_BLAKE2s";
 pub(crate) const MAX_NOISE_MESSAGE_LENGTH: usize = u16::MAX as usize;
 
@@ -104,7 +107,8 @@ impl EncryptionStream {
 
         let noise = handshake_state.into_transport_mode()?;
 
-        println!("Noise handshake successful");
+        #[cfg(feature = "tracing")]
+        info!("Noise handshake complete");
 
         Ok(Self {
             send_stream,
@@ -119,6 +123,13 @@ impl EncryptionStream {
 
     #[inline]
     async fn send_msg(send_stream: &mut SendStream, send_buffer: &mut [u8]) -> Result<()> {
+        #[cfg(feature = "tracing")]
+        info!(
+            "Sending msg (length {:?}) to stream {:?}",
+            send_buffer.len(),
+            send_stream.id()
+        );
+
         send_stream.write_u16(send_buffer.len() as u16).await?;
         send_stream.write_all(&send_buffer).await?;
         send_stream.flush().await?;
@@ -129,6 +140,13 @@ impl EncryptionStream {
     #[inline]
     async fn recv_msg(recv_stream: &mut RecvStream, recv_buffer: &mut Vec<u8>) -> Result<usize> {
         let msg_len = recv_stream.read_u16().await?;
+
+        #[cfg(feature = "tracing")]
+        info!(
+            "Recv msg (length {}) to stream {:?}",
+            msg_len,
+            recv_stream.id()
+        );
 
         recv_stream
             .read_exact(&mut (recv_buffer[0..msg_len as usize]))
@@ -221,13 +239,14 @@ impl EncryptionStream {
             }
             Frame::TransferComplete(sender_file_hash) => {
                 let our_file_hash = self.file_hash.finalize_hash();
-                println!("{}", base64ct::Base64::encode_string(&our_file_hash));
+
                 file.sync_all().await?;
 
                 if sender_file_hash != our_file_hash {
                     Err(Error::InvalidBlake3Hash)
                 } else {
-                    println!("File received successfully");
+                    #[cfg(feature = "tracing")]
+                    info!("File received successfully");
 
                     Ok(0)
                 }

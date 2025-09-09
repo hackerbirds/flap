@@ -27,6 +27,9 @@ use crate::{
     ticket::Ticket,
 };
 
+#[cfg(feature = "tracing")]
+use tracing::{error, info};
+
 #[derive(Debug, Clone)]
 pub struct P2pSender {
     p2p_endpoint: P2pEndpoint,
@@ -69,7 +72,9 @@ impl P2pSender {
 
         if self.files_added.lock().await.insert(file_path.clone()) {
             self.files_queue_tx.send(file_path).map_err(|_| {
-                println!("error happened while preparing to send file");
+                #[cfg(feature = "tracing")]
+                error!("error happened while preparing to send file");
+
                 Error::MpscSendError
             })?;
 
@@ -90,7 +95,8 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
             while let Some(file_path) = files_queue_rx.lock().await.recv().await {
                 let (file_stream_tx, file_stream_rx) = connection.open_bi().await.unwrap();
 
-                println!("Opened stream");
+                #[cfg(feature = "tracing")]
+                info!("Opened stream");
 
                 let mut encrypted_stream = EncryptionStream::initiate(
                     true,
@@ -103,6 +109,8 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                 .await
                 .expect("noise handshake succeeds");
 
+                #[cfg(feature = "tracing")]
+                info!("Reading file metadata");
                 let file_metadata = FlapFileMetadata::from_path(&file_path).await;
 
                 get_event_handler().send_event(Event::PreparingFile(
@@ -111,16 +119,26 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                     true,
                 ));
 
+                #[cfg(feature = "tracing")]
+                info!("Sending file metadata to receiver");
+
                 encrypted_stream
                     .send_file_metadata(file_metadata)
                     .await
                     .expect("file metadata sends");
 
+                #[cfg(feature = "tracing")]
+                info!("Waiting for receiver's ready...");
                 let seek = encrypted_stream.wait_for_ready().await.expect("stream ok");
 
+                #[cfg(feature = "tracing")]
+                info!("Opening file");
                 let mut file = File::open(file_path).await.unwrap();
 
                 if seek != 0 {
+                    #[cfg(feature = "tracing")]
+                    info!("Partial file detected, seeking to end of file");
+
                     encrypted_stream.set_file_hasher(
                         Blake3::partial_hash(&mut file, Some(seek))
                             .await
@@ -133,11 +151,16 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                 let mut file_buf = BytesMut::zeroed(1 << 15);
 
                 loop {
+                    #[cfg(feature = "tracing")]
+                    info!("Sending file block to stream");
                     match encrypted_stream
                         .send_next_file_block(&mut file, &mut file_buf)
                         .await
                     {
                         Ok(0) => {
+                            #[cfg(feature = "tracing")]
+                            info!("File EOF reached, transfer completed");
+
                             get_event_handler().send_event(Event::TransferComplete(
                                 encrypted_stream.transfer_id(),
                             ));
@@ -153,7 +176,8 @@ impl iroh::protocol::ProtocolHandler for P2pSender {
                             ));
                         }
                         Err(e) => {
-                            panic!("{e}");
+                            error!("{e}");
+                            break;
                         }
                     }
                 }

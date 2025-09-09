@@ -1,5 +1,8 @@
 use std::ops::Deref;
 
+#[cfg(feature = "tracing")]
+use tracing::warn;
+
 use crate::{error::Result, p2p::ALPN};
 
 #[derive(Debug, Clone)]
@@ -27,6 +30,7 @@ impl Deref for P2pEndpoint {
 
 impl Drop for P2pEndpoint {
     fn drop(&mut self) {
-        println!("dropping endpoint!")
+        #[cfg(feature = "tracing")]
+        warn!("dropping endpoint!")
     }
 }

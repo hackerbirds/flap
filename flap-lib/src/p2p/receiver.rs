@@ -10,6 +10,9 @@ use crate::{
     ticket::Ticket,
 };
 
+#[cfg(feature = "tracing")]
+use tracing::{error, info};
+
 #[derive(Debug)]
 pub struct P2pReceiver {
     p2p_endpoint: P2pEndpoint,
@@ -28,7 +31,8 @@ impl P2pReceiver {
             .connect(ticket.node_id.clone(), ALPN)
             .await?;
 
-        println!("Connection established");
+        #[cfg(feature = "tracing")]
+        info!("Connection established");
 
         let file_saver = FileSaver::new().await;
         // The set of all file decryptor streams.
@@ -39,15 +43,21 @@ impl P2pReceiver {
                 Some(Ok(res)) = file_streams.join_next() => {
                     match res {
                         Ok(()) => {
-                            println!("File downloaded and saved successfully.");
+                            #[cfg(feature = "tracing")]
+                            info!("File downloaded and saved successfully.");
                         },
                         Err(err) => panic!("err: {err:?}")
                     }
                 },
                 res = connection.accept_bi() => {
-                    println!("Stream open");
+                    #[cfg(feature = "tracing")]
+                    info!("QUIC Bi-di stream accepted");
+
                     match res {
                         Ok((stream_tx, stream_rx)) => {
+                            #[cfg(feature = "tracing")]
+                            info!("Connecting to receiver stream");
+
                             // New file
                             let mut encrypted_stream = EncryptionStream::initiate(
                                 false,
@@ -61,12 +71,21 @@ impl P2pReceiver {
                             .expect("noise handshake succeeds");
 
                             let file_metadata = encrypted_stream.get_file_metadata().await.unwrap();
+
+                            #[cfg(feature = "tracing")]
+                            info!("File metadata acquired. Opening file...");
+
                             let (mut file, seek, hash) = file_saver.prepare_file(&file_metadata).await.unwrap();
 
                             if let Some(partial_hash) = hash {
+                                #[cfg(feature = "tracing")]
+                                info!("Partial hash detected");
+
                                 encrypted_stream.set_file_hasher(partial_hash);
                             }
 
+                            #[cfg(feature = "tracing")]
+                            info!("Letting sender know we are ready to begin transfer");
                             encrypted_stream.send_ready(seek).await.unwrap();
 
                             get_event_handler().send_event(Event::PreparingFile(
@@ -79,11 +98,14 @@ impl P2pReceiver {
                             let mut total_bytes_received = 0;
                             let fut = async move {
                                 loop {
+                                    #[cfg(feature = "tracing")]
+                                    info!("Reading file block from stream");
                                     match encrypted_stream.recv_next_file_block(&mut file).await {
                                         Ok(0) => {
                                             file_saver_c.finish_file(&file_metadata).await.unwrap();
 
-                                            println!("Sending complete event");
+                                            #[cfg(feature = "tracing")]
+                                            info!("Transfer completed");
 
                                             get_event_handler().send_event(Event::TransferComplete(
                                                 encrypted_stream.transfer_id()
@@ -108,15 +130,19 @@ impl P2pReceiver {
 
                             file_streams.spawn(fut);
                         },
-                        Err(ConnectionError::LocallyClosed) => { println!("Stream closed") }
+                        Err(ConnectionError::LocallyClosed) => {
+                            #[cfg(feature = "tracing")]
+                            info!("Stream closed")
+                        }
                         Err(err) => {
-                            println!("Something strange happeend while accepting stream: {err:?}");
+                            #[cfg(feature = "tracing")]
+                            error!("Something strange happeend while accepting stream: {err:?}");
+
                             break;
                         }
                     }
                 },
                 else => {
-                    println!("Nothing happening");
                 }
             }
         }
