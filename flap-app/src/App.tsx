@@ -4,7 +4,6 @@ import "./App.css";
 import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-import HelpModal from "./HelpModal";
 
 type TransferId = Uint8Array;
 

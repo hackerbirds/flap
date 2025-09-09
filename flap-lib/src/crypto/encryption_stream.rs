@@ -1,6 +1,5 @@
 use std::io::ErrorKind;
 
-use base64ct::Encoding;
 use bytes::BytesMut;
 use iroh::{
     PublicKey, SecretKey,
