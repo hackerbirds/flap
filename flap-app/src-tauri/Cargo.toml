@@ -1,6 +1,6 @@
 [package]
 name = "flap-app"
-version = "0.4.0"
+version = "0.4.1"
 description = "Transfer your files from one device to another. Just Flap It!"
 authors = ["you"]
 edition = "2021"
