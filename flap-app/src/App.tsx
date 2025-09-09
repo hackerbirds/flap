@@ -4,6 +4,7 @@ import "./App.css";
 import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import HelpModal from "./HelpModal";
 
 type TransferId = Uint8Array;
 
@@ -154,20 +155,23 @@ function App() {
   return (
     <main className="container">
       <div className="center">
-        <div className="crow">
-          {isCrowFlying ? <div className="flying-crow">
-            <img className="flying-crow-1" src="flap1.png"></img>
-            <img className="flying-crow-2" src="flap2.png"></img>
-            <img className="flying-crow-3" src="flap3.png"></img>
+        <div className="top">
+          <div className="crow">
+            {isCrowFlying ? <div className="flying-crow">
+              <img className="flying-crow-1" src="flap1.png"></img>
+              <img className="flying-crow-2" src="flap2.png"></img>
+              <img className="flying-crow-3" src="flap3.png"></img>
+            </div>
+              : <img className="standing-crow" src="standing.png"></img>}
           </div>
-            : <img className="standing-crow" src="standing.png"></img>}
-
+          <section id="top-buttons">
+          </section>
         </div>
         <section id="action">
           <section id="send">
             <h1>Send a package</h1>
             <div className="ticket">
-              <img src="file-plus.svg" onClick={selectFileDialog} alt="Add a new file for this transfer" height="18" />
+              <img className="icon" src="file-plus.svg" onClick={selectFileDialog} alt="Add a new file for this transfer" />
               <h3 onClick={copyTicketToClipboard}>{sendTicket}</h3>
             </div>
             <div className="transfers completed">
@@ -175,7 +179,7 @@ function App() {
                 [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) !== undefined).map((metadata, i) => {
                   return <div className="completed-transfer transfer" key={i}>
                     <b>{metadata.fileName}</b>
-                    <img src="check.svg" />
+                    <img className="icon" src="check.svg" />
                   </div>
                 })
               }
