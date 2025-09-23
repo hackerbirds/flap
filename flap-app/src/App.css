@@ -16,10 +16,10 @@
   font-weight: 500;
 
   --send-color: #66bd69;
-  --send-input-bg: #4a974e;
+  --send-input-bg: #478e4b;
   --send-input-active: #39b33f;
-  --receive-bg-color: #eaa3e6;
-  --receive-input-bg: #ab73a9;
+  --receive-bg-color: #ed89ed;
+  --receive-input-bg: #a25ba0;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -148,7 +148,8 @@ input {
 input:hover,
 button:hover,
 section#drag-area:hover,
-section#drag-area:active {
+section#drag-area:active,
+.ticket:active {
   filter: brightness(110%);
 }
 
@@ -186,10 +187,6 @@ input#ticket-input {
 
 .ticket:hover {
   background-color: var(--send-color);
-}
-
-.ticket:active {
-  background-color: var(--send-input-active);
 }
 
 div.round-border {
