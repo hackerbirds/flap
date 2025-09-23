@@ -10,6 +10,7 @@ with the utmost care for your privacy and security.
 
 # Just Flap It!
 
+<img width="1424" height="890" alt="flap" src="https://github.com/user-attachments/assets/68ca3dbf-fe8d-4f40-aa1d-1d38e27dbe5f" />
 
 
 ### END-TO-END ENCRYPTION, EVERYTIME
@@ -18,12 +19,11 @@ Our team would not learn anything should they decide to tear open your packages 
 
 ### DIRECT CAWMMUNICATION
 
-Your packages are directly transmitted to the device you intend to. *There are no middlebirds during the transit*. To ensure reliability, crows may still communicate with the rest of the flock to determine the recipient's final location. This does not affect your privacy, and will become optional in the future.
+Whenever possible, your packages are directly transmitted to the device you intend to. To ensure reliability, crows may still communicate and transfer with the rest of the flock to access the recipient's final location. This does not reveal anything about the transfer, and will become optional in the future.
                 
 ### CROWCURRENT
 
 You may transfer *more than one file at a time*. Just throw them to the crows, and they'll take care of the rest.
-
 
 # Frequently Asked Questions
 
@@ -45,7 +45,7 @@ We use <a href="https://iroh.computer">iroh</a>, creating a peer-to-peer connect
 
 ### "HOW ARE MY FILES ENCRPYTED?"
 
-Files are encrypted using secret keys generated using the ticket. Thanks to the design of tickets, no one but you and the recipient knows how to decrypt the file. The <a href="https://noiseprotocol.org/">Noise protocol</a> is used as the foundation for encryption. The cryptography primitives we use are:
+Files are sent through an authenticated and encrypted QUIC channel, but also encrypted using secret keys generated using the ticket. Thanks to the design of tickets, no one but you and the recipient knows how to decrypt the file. The <a href="https://noiseprotocol.org/">Noise protocol</a> is used as the foundation for encryption. The cryptography primitives we use are:
 - `ChaCha20-Poly1305` for the AEAD, which is fast, modern, well-known, and verifies the integrity of the file as it gets transferred.
 - `Curve25519` for the DH operations
     - Note: iroh uses `ed25519` keys for authenticating p2p endpoints, and we use a clever trick to convert these keys into `X25519` keys used for Noise.
