@@ -15,11 +15,11 @@
   line-height: 24px;
   font-weight: 500;
 
-  --send-color: #66bd69;
-  --send-input-bg: #478e4b;
-  --send-input-active: #39b33f;
-  --receive-bg-color: #ed89ed;
-  --receive-input-bg: #a25ba0;
+  --send-color: oklch(70% 0.14 140);
+  --send-input-bg: oklch(57% 0.14 140);
+  --send-input-active: oklch(70% 0.18 140);
+  --receive-bg-color: oklch(70% 0.14 330);
+  --receive-input-bg: oklch(57% 0.14 330);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -127,7 +127,12 @@ input {
   padding: 0.5rem;
   background-color: var(--send-input-bg);
   font-size: large;
-  color: #e6e6e6;
+}
+
+section#drag-area > b, input::placeholder {
+  font-family: "Young Serif";
+  color: #d0d0d0;
+  opacity: 90%;
 }
 
 input,

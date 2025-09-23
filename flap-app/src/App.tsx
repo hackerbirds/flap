@@ -170,7 +170,7 @@ function App() {
             <section id="send">
               <h1>Send a package</h1>
               <section id="drag-area" onClick={selectFileDialog}>
-                Select a file
+                <b>Select a file</b>
               </section>
               <div className="transfers completed">
                 {
