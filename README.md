@@ -1,5 +1,3 @@
-<img src="flap-app/public/standing.png" width="200"/> 
-
 # Flap
 
 Our expert team of crows has been trained to provide the best file transfer service.
