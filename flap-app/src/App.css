@@ -18,8 +18,8 @@
   --send-color: oklch(70% 0.14 140);
   --send-input-bg: oklch(57% 0.14 140);
   --send-input-active: oklch(70% 0.18 140);
-  --receive-bg-color: oklch(70% 0.14 330);
-  --receive-input-bg: oklch(57% 0.14 330);
+  --receive-bg-color: oklch(75% 0.14 330);
+  --receive-input-bg: oklch(60% 0.14 330);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
