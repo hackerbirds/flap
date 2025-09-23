@@ -166,70 +166,74 @@ function App() {
           </section>
         </div>
         <section id="action">
-          <section id="send">
-            <h1>Send a package</h1>
-            <section id="drag-area" onClick={selectFileDialog}>
-              Select a file
+          <div className="round-border">
+            <section id="send">
+              <h1>Send a package</h1>
+              <section id="drag-area" onClick={selectFileDialog}>
+                Select a file
+              </section>
+              <div className="transfers completed">
+                {
+                  [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) !== undefined).map((metadata, i) => {
+                    return <div className="completed-transfer transfer" onClick={() => setCompletedTransfers(completedTransfers.splice(i, 1))} key={i}>
+                      <b>{metadata.fileName}</b>
+                      <img className="icon" src="check.svg" />
+                    </div>
+                  })
+                }
+              </div>
+              <div className="transfers sending">
+                {
+                  [...transfers].filter(([_transfer_id, transfer]) => transfer.sending).map(([transfer_id, transfer]) => {
+                    return <div className="transfer" key={transfer_id}>
+                      <b>{transfer.metadata.fileName}</b>
+                      <progress max="100" value={transfer.progress === 0 ? undefined : transfer.progress}></progress>
+                    </div>
+                  })
+                }
+              </div>
             </section>
-            <div className="transfers completed">
-              {
-                [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) !== undefined).map((metadata, i) => {
-                  return <div className="completed-transfer transfer" onClick={() => setCompletedTransfers(completedTransfers.splice(i, 1))} key={i}>
-                    <b>{metadata.fileName}</b>
-                    <img className="icon" src="check.svg" />
-                  </div>
-                })
-              }
-            </div>
-            <div className="transfers sending">
-              {
-                [...transfers].filter(([_transfer_id, transfer]) => transfer.sending).map(([transfer_id, transfer]) => {
-                  return <div className="transfer" key={transfer_id}>
-                    <b>{transfer.metadata.fileName}</b>
-                    <progress max="100" value={transfer.progress === 0 ? undefined : transfer.progress}></progress>
-                  </div>
-                })
-              }
-            </div>
-          </section>
-          <section id="receive">
-            <h1>Receive a package</h1>
-            <form
-              className="row"
-              onSubmit={(e) => {
-                e.preventDefault();
-                invoke('receive_file', { ticketString: receiveTicket }).then(() => {
-                  console.log("File received")
-                })
-              }}
-            >
-              <input
-                id="ticket-input"
-                onChange={(e) => { setReceiveTicket(e.target.value) }}
-                placeholder="flap/<id>/<key>"
-              />
-            </form>
-            <div className="transfers receiving">
-              {
-                [...transfers].filter(([_transfer_id, transfer]) => !transfer.sending).map(([transfer_id, transfer]) => {
-                  return <div className="transfer" key={transfer_id}>
-                    <b>{transfer.metadata.fileName}</b>
-                    <progress max="100" value={transfer.progress}></progress>
-                  </div>
-                })
-              }
-            </div>
-            <div className="transfers completed">
-              {
-                [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) === undefined).map((metadata, i) => {
-                  return <div className="completed-transfer" key={i}>
-                    <b>{metadata.fileName}</b>
-                    <img src="check.svg" />
-                  </div>
-                })
-              }
-            </div>
-          </section>
+          </div>
+          <div className="round-border">
+            <section id="receive">
+              <h1>Receive a package</h1>
+              <form
+                className="row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  invoke('receive_file', { ticketString: receiveTicket }).then(() => {
+                    console.log("File received")
+                  })
+                }}
+              >
+                <input
+                  id="ticket-input"
+                  onChange={(e) => { setReceiveTicket(e.target.value) }}
+                  placeholder="flap/<id>/<key>"
+                />
+              </form>
+              <div className="transfers receiving">
+                {
+                  [...transfers].filter(([_transfer_id, transfer]) => !transfer.sending).map(([transfer_id, transfer]) => {
+                    return <div className="transfer" key={transfer_id}>
+                      <b>{transfer.metadata.fileName}</b>
+                      <progress max="100" value={transfer.progress}></progress>
+                    </div>
+                  })
+                }
+              </div>
+              <div className="transfers completed">
+                {
+                  [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) === undefined).map((metadata, i) => {
+                    return <div className="completed-transfer" key={i}>
+                      <b>{metadata.fileName}</b>
+                      <img src="check.svg" />
+                    </div>
+                  })
+                }
+              </div>
+            </section>
+          </div>
         </section>
       </div>
     </main>

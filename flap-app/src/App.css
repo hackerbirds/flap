@@ -15,17 +15,19 @@
   line-height: 24px;
   font-weight: 500;
 
-  --send-color: #5ea560;
-  --send-input-bg: #3c833f;
+  --send-color: #66bd69;
+  --send-input-bg: #4a974e;
   --send-input-active: #39b33f;
   --receive-bg-color: #eaa3e6;
-  --receive-input-bg: #986496;
+  --receive-input-bg: #ab73a9;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  overflow: hidden;
 }
 
 main.container {
@@ -51,7 +53,7 @@ div.center {
   margin: 0;
   position: relative;
 
-  height: 90px;
+  height: 80px;
   width: 100%;
 
   display: flex;
@@ -86,19 +88,18 @@ section#action {
   gap: 1rem;
   overflow: hidden;
   max-width: 100%;
+  height: 200px;
 }
 
-section#action>section {
+section#action > div > section {
   flex-grow: 1;
   min-width: 0;
   width: 100%;
+  height: inherit;
   overflow-y: scroll;
 
   max-width: 400px;
-  height: 100%;
-  max-height: 220px;
 
-  border: 1px solid #a4a4a4;
   box-shadow: 1px 1px 3px #cfcfcf;
   padding: 1rem;
   padding-bottom: 2rem;
@@ -120,9 +121,9 @@ section#drag-area, input {
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 16px;
-  padding: 1rem;
-  border: 2px dotted var(--send-color);
+  border-radius: 4px;
+  min-height: 40px;
+  padding: 0.5rem;
   background-color: var(--send-input-bg);
   font-size: large;
   color: white;
@@ -132,7 +133,7 @@ input,
 button {
   color: white;
   background-color: grey;
-  border: 2px dotted var(--receive-bg-color);
+  border: 0;
   font-weight: 500;
   box-sizing: border-box;
   width: 100%;
@@ -170,7 +171,7 @@ input#ticket-input {
 .ticket {
   display: flex;
   align-items: center;
-  width: 100%;
+  width: 95%;
   height: 26px;
   padding: 0;
   padding-left: 0.2rem;
@@ -190,6 +191,13 @@ input#ticket-input {
   background-color: var(--send-input-active);
 }
 
+div.round-border {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
 div.transfer {
   display: flex;
   flex-direction: column;
@@ -207,7 +215,9 @@ div.transfer:hover {
 }
 
 div.transfer:active {
-  background-color: var(--send-input-active);
+  & > b {
+    text-shadow: red 1px 1px 2px;
+  }
 }
 
 div.transfer b {
@@ -241,7 +251,7 @@ div.completed-transfer b {
 
 .standing-crow {
   position: relative;
-  top: -23px;
+  top: -33px;
   left: 0;
   width: 150px;
   z-index: 2;
