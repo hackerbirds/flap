@@ -28,4 +28,5 @@ tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 tracing-subscriber = {version = "0.3.20", features = ["local-time"] }
 time = "0.3.43"
+tauri-plugin-decorum = "1.1.1"
 

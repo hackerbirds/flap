@@ -15,7 +15,6 @@
   line-height: 24px;
   font-weight: 500;
 
-
   --send-color: #5ea560;
   --send-input-bg: #3c833f;
   --send-input-active: #39b33f;
@@ -27,16 +26,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
 }
 
 main.container {
   background-color: white;
-  width: 100%;
-  height: 100%;
+  width: 100wh;
+  height: 100vh;
 
   overflow: hidden;
 }

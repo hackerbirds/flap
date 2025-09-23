@@ -14,13 +14,17 @@
       {
         "title": "Flap",
         "width": 600,
-        "height": 400
+        "height": 333,
+        "resizable": false,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay"
       }
     ],
     "security": {
       "csp": null,
       "capabilities": []
-    }
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,
