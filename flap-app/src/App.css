@@ -5,8 +5,8 @@
 }
 
 @font-face {
-    font-family: 'Young Serif';
-    src: url(./assets/YoungSerif-Regular.ttf);
+  font-family: 'Young Serif';
+  src: url(./assets/YoungSerif-Regular.ttf);
 }
 
 :root {
@@ -15,8 +15,6 @@
   line-height: 24px;
   font-weight: 500;
 
-  color: white;
-  background-color: #f6f6f6;
 
   --send-color: #5ea560;
   --send-input-bg: #3c833f;
@@ -39,6 +37,8 @@ main.container {
   background-color: white;
   width: 100%;
   height: 100%;
+
+  overflow: hidden;
 }
 
 div.center {
@@ -60,7 +60,6 @@ div.center {
   width: 100%;
 
   display: flex;
-  justify-content: space-between;
 }
 
 section#top-buttons {
@@ -92,17 +91,17 @@ section#action {
   gap: 1rem;
   overflow: hidden;
   max-width: 100%;
-  height: 100%;
 }
 
-section#action > section {
+section#action>section {
   flex-grow: 1;
   min-width: 0;
   width: 100%;
   overflow-y: scroll;
 
   max-width: 400px;
-  min-height: 300px;
+  height: 100%;
+  max-height: 220px;
 
   border: 1px solid #a4a4a4;
   box-shadow: 1px 1px 3px #cfcfcf;
@@ -122,26 +121,37 @@ section#receive {
   background-color: var(--receive-bg-color);
 }
 
-input, button {
+section#drag-area, input {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  padding: 1rem;
+  border: 2px dotted var(--send-color);
+  background-color: var(--send-input-bg);
+  font-size: large;
+  color: white;
+}
+
+input,
+button {
   color: white;
   background-color: grey;
-  border: 0;
-  border-radius: 3px;
+  border: 2px dotted var(--receive-bg-color);
   font-weight: 500;
-  font-size: x-large;
   box-sizing: border-box;
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
   width: 100%;
-  max-height: 100px;
+  height: 100%;
 }
 
 input {
   padding-left: 1rem;
 }
 
-input:hover, button:hover {
+input:hover,
+button:hover,
+section#drag-area:hover,
+section#drag-area:active {
   filter: brightness(110%);
 }
 
@@ -153,32 +163,35 @@ input#ticket-input {
   background-color: var(--receive-input-bg);
 }
 
+.ticket-div {
+  color: black;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .ticket {
   display: flex;
   align-items: center;
-  gap: 4px;
+  width: 100%;
   height: 26px;
-}
-
-.ticket > img {
-  height: 26px;
-  padding: 2px;
-}
-
-.ticket > h3 {
-  height: inherit;
   padding: 0;
   padding-left: 0.2rem;
-  white-space: nowrap;
+  text-wrap: nowrap;
   scrollbar-width: none;
   overflow-x: scroll;
   font-size: 18px;
   font-family: monospace;
-  color: white;
-  background-color: var(--send-input-bg);
+  background-color: #e9e9e9;
 }
 
-.ticket > h3:active {
+.ticket:hover {
+  background-color: var(--send-color);
+}
+
+.ticket:active {
   background-color: var(--send-input-active);
 }
 
@@ -193,7 +206,9 @@ div.transfer {
 }
 
 div.transfer:hover {
-  background-color: var(--send-input-bg);
+  & > b {
+    text-shadow: white 1px 1px 2px;
+  }
 }
 
 div.transfer:active {
@@ -224,28 +239,9 @@ div.completed-transfer b {
 
 .crow {
   height: 50px;
-  width: 100%;
 
   position: relative;
   top: 5px;
-}
-
-.flying-crow {
-  min-width: 0;
-  height: 100%;
-  width: 100%;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.flying-crow > img {
-  display: absolute;
-  aspect-ratio: 1;
-  max-height: 120px;
-  height: 300%;
-  position: relative;
 }
 
 .standing-crow {
@@ -254,74 +250,4 @@ div.completed-transfer b {
   left: 0;
   width: 150px;
   z-index: 2;
-}
-
-.flying-crow-1 {
-  animation: flap-crow-1 1.5s infinite;
-}
-
-.flying-crow-2 {
-  top: -20px;
-  animation: flap-crow-2 1.5s infinite;
-}
-
-.flying-crow-3 {
-  animation: flap-crow-3 1.5s infinite;
-}
-
-@keyframes flap-crow-1 {
-  0% {
-    left: 0;
-    visibility: visible;
-  }
-  33.299% {
-    visibility: visible;
-  }
-  33.3% {
-    visibility: hidden;
-  }
-  100% {
-    visibility: hidden;
-    left: 10px;
-  }
-}
-
-@keyframes flap-crow-2 {
-  0% {
-    visibility: hidden;
-    left: -10px;
-  }
-  33.299% {
-    visibility: hidden;
-  }
-  33.3% {
-    visibility: visible;
-  }
-  66.599% {
-    visibility: visible;
-  }
-  66.6% {
-    visibility: hidden;
-  }
-  100% {
-    visibility: hidden;
-    left: 10px;
-  }
-}
-
-@keyframes flap-crow-3 {
-  0% {
-    left: -10px;
-    visibility: hidden;
-  }
-  66.599% {
-    visibility: hidden;
-  }
-  66.6% {
-    visibility: visible;
-  }
-  100% {
-    visibility: visible;
-    left: 0;
-  }
 }

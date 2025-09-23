@@ -156,12 +156,11 @@ function App() {
       <div className="center">
         <div className="top">
           <div className="crow">
-            {isCrowFlying ? <div className="flying-crow">
-              <img className="flying-crow-1" src="flap1.png"></img>
-              <img className="flying-crow-2" src="flap2.png"></img>
-              <img className="flying-crow-3" src="flap3.png"></img>
-            </div>
-              : <img className="standing-crow" src="standing.png"></img>}
+            <img className="standing-crow" src="standing.png" />
+          </div>
+          <div className="ticket-div">
+            <h2>Here's your ticket</h2>
+            <h3 className="ticket" onClick={copyTicketToClipboard}>{sendTicket}</h3>
           </div>
           <section id="top-buttons">
           </section>
@@ -169,14 +168,13 @@ function App() {
         <section id="action">
           <section id="send">
             <h1>Send a package</h1>
-            <div className="ticket">
-              <img className="icon" src="file-plus.svg" onClick={selectFileDialog} alt="Add a new file for this transfer" />
-              <h3 onClick={copyTicketToClipboard}>{sendTicket}</h3>
-            </div>
+            <section id="drag-area" onClick={selectFileDialog}>
+              Select a file
+            </section>
             <div className="transfers completed">
               {
                 [...completedTransfers].filter((metadata) => pendingSendingTransfers.get(metadata.fileName) !== undefined).map((metadata, i) => {
-                  return <div className="completed-transfer transfer" key={i}>
+                  return <div className="completed-transfer transfer" onClick={() => setCompletedTransfers(completedTransfers.splice(i, 1))} key={i}>
                     <b>{metadata.fileName}</b>
                     <img className="icon" src="check.svg" />
                   </div>
