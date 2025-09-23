@@ -91,7 +91,7 @@ section#action {
   height: 200px;
 }
 
-section#action > div > section {
+section#action>div>section {
   flex-grow: 1;
   min-width: 0;
   width: 100%;
@@ -117,7 +117,8 @@ section#receive {
   background-color: var(--receive-bg-color);
 }
 
-section#drag-area, input {
+section#drag-area,
+input {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -126,7 +127,7 @@ section#drag-area, input {
   padding: 0.5rem;
   background-color: var(--send-input-bg);
   font-size: large;
-  color: white;
+  color: #e6e6e6;
 }
 
 input,
@@ -209,13 +210,13 @@ div.transfer {
 }
 
 div.transfer:hover {
-  & > b {
+  &>b {
     text-shadow: white 1px 1px 2px;
   }
 }
 
 div.transfer:active {
-  & > b {
+  &>b {
     text-shadow: red 1px 1px 2px;
   }
 }
